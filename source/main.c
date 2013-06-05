@@ -20,55 +20,14 @@
 **************************************************************************************/
 
 #include <gccore.h>
-#include <fat.h>
-#include <sdcard/wiisd_io.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <malloc.h>
-#include <wiiuse/wpad.h>
-
-#include "armboot.h"
 
 #define le32(i) (((((u32) i) & 0xFF) << 24) | ((((u32) i) & 0xFF00) << 8) | \
                 ((((u32) i) & 0xFF0000) >> 8) | ((((u32) i) & 0xFF000000) >> 24))
-				
-enum
-{
-    SD = 0,
-    USB1,
-    USB2,
-    USB3,
-    USB4,
-    MAXDEV
-};
-
-static const char dev[MAXDEV][6] =
-{
-    "sd",
-    "usb1",
-    "usb2",
-    "usb3",
-    "usb4"
-};
-
-typedef struct _PR 
-{
-    u8 state;                            
-    u8 chs_st[3];                        
-    u8 type;                              
-    u8 chs_e[3];                         
-    u32 lba;                         
-    u32 bc;                       
-} __attribute__((__packed__)) _pr;
-
-typedef struct _MBR
-{
-    u8 ca[446];               
-    _pr part[4]; 
-    u16 sig;                       
-} __attribute__((__packed__)) _mbr;
 
 static void initialize(GXRModeObj *rmode)
 {
@@ -90,53 +49,38 @@ static void initialize(GXRModeObj *rmode)
 }
 
 int main() {
-	GXRModeObj *rmode, *vidmode;
+	GXRModeObj *rmode;
 	VIDEO_Init();
 	rmode = VIDEO_GetPreferredMode(NULL);
 	initialize(rmode);
-	PAD_Init();
-	WPAD_Init();
-	u32 dpad = WPAD_BUTTON_UP | WPAD_BUTTON_DOWN | WPAD_BUTTON_LEFT | WPAD_BUTTON_RIGHT,
-	done = ~(WPAD_BUTTON_HOME | dpad);
-	const WPADData *wd;
-	printf("\n\n\nPress any button to start.");
-	do
-	{	WPAD_ReadPending(WPAD_CHAN_0, NULL);
-		wd = WPAD_Data(WPAD_CHAN_0);
-		if(wd->btns_d & WPAD_BUTTON_HOME)
-		{	printf("\nExiting.");
-			SYS_ResetSystem( SYS_RETURNTOMENU, 0, 0 );
-		}VIDEO_WaitVSync();
-	}while(!(wd->btns_d & (dpad|done) ));
-	printf("\nTrying to load.");
-
-	/*** Boot mini from mem code by giantpune ***/
-	void *mini = memalign( 32, armboot_size );  
-	if( !mini ) 
-		return 0;    
-
-	memcpy( mini, armboot, armboot_size );  
-	DCFlushRange( mini, armboot_size );		
-
-	*(u32*)0xc150f000 = 0x424d454d;  
-	asm volatile( "eieio" );  
-
-	*(u32*)0xc150f004 = MEM_VIRTUAL_TO_PHYSICAL( mini );  
-	asm volatile( "eieio" );
-
-	char*redirectedGecko = (char*)0xC1200000;
+	printf("\nTrying to load.\nSetting memory.\n");
+	char*redirectedGecko = (char*)0x81200000;
 	*redirectedGecko = (char)(0);
+	printf("Terminating string.\n");
 	*(redirectedGecko+1) = (char)(0);
+	printf("Setting magic word.\n");
+	*((u16*)(redirectedGecko+2)) = 0xDEB6;
+	DCFlushRange(redirectedGecko, 32);
+	tikview views[4] ATTRIBUTE_ALIGN(32);
+	printf("Shutting down IOS subsystems.\n");
+	__IOS_ShutdownSubsystems();
+	printf("Loading IOS 254.\n");
+	__ES_Init();
+	u32 numviews;
 
-	printf("Reloading IOS 254\n");
-	IOS_ReloadIOS( 0xfe );   
+	ES_GetNumTicketViews(0x00000001000000FEULL, &numviews);
+	ES_GetTicketViews(0x00000001000000FEULL, views, numviews);
+	ES_LaunchTitleBackground(0x00000001000000FEULL, &views[0]);
 
 	printf("Waiting for gecko output from mini...\n");
 	while(true)
-	{ printf(redirectedGecko);
+	{ do DCInvalidateRange(redirectedGecko, 32);
+	  while(!*redirectedGecko);
+	  VIDEO_WaitVSync();
+	  printf(redirectedGecko);
 	  *redirectedGecko = (char)(0);
+	  DCFlushRange(redirectedGecko, 32);
 	}
-	free( mini );
 
 	return 0;
 }
