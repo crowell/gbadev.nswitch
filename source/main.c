@@ -26,8 +26,78 @@
 #include <string.h>
 #include <malloc.h>
 
+#include "iospatch.h"
+
 #define le32(i) (((((u32) i) & 0xFF) << 24) | ((((u32) i) & 0xFF00) << 8) | \
                 ((((u32) i) & 0xFF0000) >> 8) | ((((u32) i) & 0xFF000000) >> 24))
+
+typedef struct dol_t dol_t;
+struct dol_t
+{
+	u32 offsetText[7];
+	u32 offsetData[11];
+	u32 addressText[7];
+	u32 addressData[11];
+	u32 sizeText[7];
+	u32 sizeData[11];
+	u32 addressBSS;
+	u32 sizeBSS;
+	u32 entrypt;
+	u8 pad[0x1C];
+};
+
+int loadDOLfromNAND(const char *path)
+{
+	int fd;
+	s32 fres;
+	fstats *status;
+	dol_t dol_hdr;
+	
+	printf("Loading DOL file: %s .\n", path);
+	fd = ISFS_Open(path, ISFS_OPEN_READ);
+	if (fd < 0)
+		return fd;
+	printf("ISFS_GetFileStats() returned %d .\n", ISFS_GetFileStats(fd, status));
+	printf("Reading header.\n");
+	fres = ISFS_Read(fd, &dol_hdr, sizeof(dol_t));
+	if (fres < 0)
+		return fres;
+	printf("Loading sections.\n");
+	int ii;
+
+	/* TEXT SECTIONS */
+	for (ii = 0; ii < 7; ii++)
+	{
+		if (!dol_hdr.sizeText[ii])
+			continue;
+		fres = ISFS_Seek(fd, dol_hdr.offsetText[ii], 0);
+		if (fres < 0)
+			return fres;
+		fres = ISFS_Read(fd, (void*)dol_hdr.addressText[ii], dol_hdr.sizeText[ii]);
+		if (fres < 0)
+			return fres;
+		printf("Text section of size %08x loaded from offset %08x to memory %08x.\n", dol_hdr.sizeText[ii], dol_hdr.offsetText[ii], dol_hdr.addressText[ii]);
+		printf("Memory area starts with %08x and ends with %08x (at address %08x)\n", *(u32*)(dol_hdr.addressData[ii]), *(u32*)(dol_hdr.addressText[ii]+(dol_hdr.sizeText[ii] - 1) & ~3),dol_hdr.addressText[ii]+(dol_hdr.sizeText[ii] - 1) & ~3);
+	}
+
+	/* DATA SECTIONS */
+	for (ii = 0; ii < 11; ii++)
+	{
+		if (!dol_hdr.sizeData[ii])
+			continue;
+		fres = ISFS_Seek(fd, dol_hdr.offsetData[ii], 0);
+		if (fres < 0)
+			return fres;
+		fres = ISFS_Read(fd, (void*)dol_hdr.addressData[ii], dol_hdr.sizeData[ii]);
+		if (fres < 0)
+			return fres;
+		printf("Data section of size %08x loaded from offset %08x to memory %08x.\n", dol_hdr.sizeData[ii], dol_hdr.offsetData[ii], dol_hdr.addressData[ii]);
+		printf("Memory area starts with %08x and ends with %08x (at address %08x)\n", *(u32*)(dol_hdr.addressData[ii]), *(u32*)(dol_hdr.addressData[ii]+(dol_hdr.sizeData[ii] - 1) & ~3),dol_hdr.addressData[ii]+(dol_hdr.sizeData[ii] - 1) & ~3);
+	}
+	
+	ISFS_Close(fd);
+	return 0;
+}
 
 static void initialize(GXRModeObj *rmode)
 {
@@ -53,6 +123,11 @@ int main() {
 	VIDEO_Init();
 	rmode = VIDEO_GetPreferredMode(NULL);
 	initialize(rmode);
+	printf("Applying patches to IOS with AHBPROT\n");
+	IOSPATCH_Apply();
+	printf("Initializing ISFS\n");
+	ISFS_Initialize();
+	printf("loadDOLfromNAND() returned %d .\n", loadDOLfromNAND("/title/00000001/00000200/content/00000003.app"));
 	printf("\nTrying to load.\nSetting memory.\n");
 	char*redirectedGecko = (char*)0x81200000;
 	*redirectedGecko = (char)(0);
