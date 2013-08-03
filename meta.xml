@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<app version="1.0">
+	<name>Linux</name>
+	<coder>carver</coder>
+	<version>r1</version>
+	<release_date>20130708182922</release_date>
+	<short_description>Wii Linux Loader</short_description>
+	<long_description>none of your fucking business.</long_description>
+<ahb_access />
+</app>

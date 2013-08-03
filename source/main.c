@@ -29,6 +29,67 @@
 #include "iospatch.h"
 #include "armboot.h"
 
+// Enable interrupt flag.
+#define MSR_EE 0x00008000
+ 
+// Disable interrupts.
+#define _CPU_ISR_Disable( _isr_cookie ) \
+  { register u32 _disable_mask = MSR_EE; \
+    _isr_cookie = 0; \
+    asm volatile ( \
+	"mfmsr %0; andc %1,%0,%1; mtmsr %1" : \
+	"=&r" ((_isr_cookie)), "=&r" ((_disable_mask)) : \
+	"0" ((_isr_cookie)), "1" ((_disable_mask)) \
+	); \
+  }
+ 
+// Alignment required for USB structures (I don't know if this is 32 or less).
+#define USB_ALIGN __attribute__ ((aligned(32)))
+ 
+ 
+char bluetoothResetData1[] USB_ALIGN = {0x20}; // bmRequestType
+char bluetoothResetData2[] USB_ALIGN = {0x00}; // bmRequest
+char bluetoothResetData3[] USB_ALIGN = {0x00, 0x00}; // wValue
+char bluetoothResetData4[] USB_ALIGN = {0x00, 0x00}; // wIndex
+char bluetoothResetData5[] USB_ALIGN = {0x03, 0x00}; // wLength
+char bluetoothResetData6[] USB_ALIGN = {0x00}; // unknown; set to zero.
+char bluetoothResetData7[] USB_ALIGN = {0x03, 0x0c, 0x00}; // Mesage payload.
+ 
+/** Vectors of data transfered. */
+ioctlv bluetoothReset[] USB_ALIGN = {
+	{	bluetoothResetData1,
+		sizeof(bluetoothResetData1)
+	},{	bluetoothResetData2,
+		sizeof(bluetoothResetData2)
+	},{	bluetoothResetData3,
+		sizeof(bluetoothResetData3)
+	},{	bluetoothResetData4,
+		sizeof(bluetoothResetData4)
+	},{	bluetoothResetData5,
+		sizeof(bluetoothResetData5)
+	},{	bluetoothResetData6,
+		sizeof(bluetoothResetData6)
+	},{	bluetoothResetData7,
+		sizeof(bluetoothResetData7)
+	}
+};
+ 
+void BTShutdown()
+{	s32 fd;
+	int rv;
+	uint32_t level;
+ 
+	printf("Open Bluetooth Dongle\n");
+	fd = IOS_Open("/dev/usb/oh1/57e/305", 2 /* 2 = write, 1 = read */);
+	printf("fd = %d\n", fd);
+ 
+	printf("Closing connection to blutooth\n");
+	rv = IOS_Ioctlv(fd, 0, 6, 1, bluetoothReset);
+	printf("ret = %d\n", rv);
+ 
+	IOS_Close(fd);
+}
+
 #define le32(i) (((((u32) i) & 0xFF) << 24) | ((((u32) i) & 0xFF00) << 8) | \
 				((((u32) i) & 0xFF0000) >> 8) | ((((u32) i) & 0xFF000000) >> 24))
 
@@ -51,14 +112,12 @@ int loadDOLfromNAND(const char *path)
 {
 	int fd;
 	s32 fres;
-	fstats *status;
 	dol_t dol_hdr;
 	
 	printf("Loading DOL file: %s .\n", path);
 	fd = ISFS_Open(path, ISFS_OPEN_READ);
 	if (fd < 0)
 		return fd;
-	printf("ISFS_GetFileStats() returned %d .\n", ISFS_GetFileStats(fd, status));
 	printf("Reading header.\n");
 	fres = ISFS_Read(fd, &dol_hdr, sizeof(dol_t));
 	if (fres < 0)
@@ -78,7 +137,7 @@ int loadDOLfromNAND(const char *path)
 		if (fres < 0)
 			return fres;
 		printf("Text section of size %08x loaded from offset %08x to memory %08x.\n", dol_hdr.sizeText[ii], dol_hdr.offsetText[ii], dol_hdr.addressText[ii]);
-		printf("Memory area starts with %08x and ends with %08x (at address %08x)\n", *(u32*)(dol_hdr.addressData[ii]), *(u32*)(dol_hdr.addressText[ii]+(dol_hdr.sizeText[ii] - 1) & ~3),dol_hdr.addressText[ii]+(dol_hdr.sizeText[ii] - 1) & ~3);
+		printf("Memory area starts with %08x and ends with %08x (at address %08x)\n", *(u32*)(dol_hdr.addressData[ii]), *(u32*)((dol_hdr.addressText[ii]+(dol_hdr.sizeText[ii] - 1)) & ~3),(dol_hdr.addressText[ii]+(dol_hdr.sizeText[ii] - 1)) & ~3);
 	}
 
 	/* DATA SECTIONS */
@@ -193,7 +252,7 @@ int main() {
 			void *mini = (void*)0x90100000;
 			memcpy(mini, armboot, armboot_size);
 			DCFlushRange( mini, armboot_size );
-			
+			BTShutdown();
 			s32 fd = IOS_Open( "/dev/es", 0 );
 			
 			u8 *buffer = (u8*)memalign( 32, 0x100 );
