@@ -29,24 +29,30 @@
 #include "runtimeiospatch.h"
 #include "armboot.h"
 
-bool __debug = false;
+typedef struct armboot_config armboot_config;
+struct armboot_config
+{	char str[2];		// character sent from armboot to be printed on screen
+	u16 debug_magic;	// set to 0xDEB6 if we want armboot to send us it's debug
+	u32 path_magic;		// set to 0x016AE570 if se are sending a custom ppcboot path
+	char buf[256];		// a buffer to put the string in where there will still be space for mini
+};
 
-#define le32(i) (((((u32) i) & 0xFF) << 24) | ((((u32) i) & 0xFF00) << 8) | \
-				((((u32) i) & 0xFF0000) >> 8) | ((((u32) i) & 0xFF000000) >> 24))
-// Enable interrupt flag.
-#define MSR_EE 0x00008000
- 
-// Disable interrupts.
-#define _CPU_ISR_Disable( _isr_cookie ) \
-  { register u32 _disable_mask = MSR_EE; \
-    _isr_cookie = 0; \
-    asm volatile ( \
-	"mfmsr %0; andc %1,%0,%1; mtmsr %1" : \
-	"=&r" ((_isr_cookie)), "=&r" ((_disable_mask)) : \
-	"0" ((_isr_cookie)), "1" ((_disable_mask)) \
-	); \
-  }
- 
+bool __debug = false;
+bool __useIOS = true;
+armboot_config *redirectedGecko = (armboot_config*)0x81200000;
+
+// Check if string X is in current argument
+#define CHECK_ARG(X) (!strncmp((X), argv[i], sizeof((X))-1))
+
+// Colors for debug output
+#define	RED		"\x1b[31;1m"
+#define	GREEN	"\x1b[32;1m"
+#define	YELLOW	"\x1b[33;1m"
+#define	WHITE	"\x1b[37;1m"
+
+// Remeber to set it back to WHITE when you're done
+#define CHANGE_COLOR(X)	(printf((X)))
+
 // Alignment required for USB structures (I don't know if this is 32 or less).
 #define USB_ALIGN __attribute__ ((aligned(32)))
  
@@ -80,7 +86,6 @@ ioctlv bluetoothReset[] USB_ALIGN = {
 void BTShutdown()
 {	s32 fd;
 	int rv;
-	//uint32_t level;
  
 	printf("Open Bluetooth Dongle\n");
 	fd = IOS_Open("/dev/usb/oh1/57e/305", 2 /* 2 = write, 1 = read */);
@@ -91,6 +96,29 @@ void BTShutdown()
 	printf("ret = %d\n", rv);
  
 	IOS_Close(fd);
+}
+
+void CheckArguments(int argc, char **argv) {
+	int i;
+	bool pathSet = false;
+	char*newPath = redirectedGecko->buf;
+	if(( pathSet = (argv[0][0] == 's' || argv[0][0] == 'S') )) // Make sure you're using an SD card
+	{	*strrchr(argv[0], '/') = '\0';
+		snprintf(newPath, sizeof(redirectedGecko->buf), "%s/ppcboot.elf", argv[0]+3);
+	}
+	for (i = 1; i < argc; i++)
+	{	if (CHECK_ARG("debug="))
+			__debug = atoi(strchr(argv[i],'=')+1);
+		else if ( pathSet |= (CHECK_ARG("path=")) )
+			strcpy(newPath, strchr(argv[i],'=')+1);
+		else if (CHECK_ARG("bootmii="))
+			__useIOS = atoi(strchr(argv[i],'=')+1);
+	}
+	if(pathSet)
+	{	redirectedGecko->path_magic = 0x016AE570;
+		DCFlushRange(redirectedGecko, 288);
+		if(__debug) printf("Setting ppcboot location to %s.\n", newPath);
+	}
 }
 
 typedef struct dol_t dol_t;
@@ -112,14 +140,12 @@ int loadDOLfromNAND(const char *path)
 {
 	int fd ATTRIBUTE_ALIGN(32);
 	s32 fres;
-	//fstats *status ATTRIBUTE_ALIGN(32);
 	dol_t dol_hdr ATTRIBUTE_ALIGN(32);
 	
 	if(__debug) printf("Loading DOL file: %s .\n", path);
 	fd = ISFS_Open(path, ISFS_OPEN_READ);
 	if (fd < 0)
 		return fd;
-	//printf("ISFS_GetFileStats() returned %d .\n", ISFS_GetFileStats(fd, status));
 	if(__debug) printf("Reading header.\n");
 	fres = ISFS_Read(fd, &dol_hdr, sizeof(dol_t));
 	if (fres < 0)
@@ -189,44 +215,38 @@ int main(int argc, char **argv) {
 	VIDEO_Init();
 	rmode = VIDEO_GetPreferredMode(NULL);
 	initialize(rmode);
-	u32 i, c;
-	bool useIOS = false;
-	char*redirectedGecko = (char*)0x81200000; 
-	for(i=1;i<argc;i++)
-	{	if(argv[i][0] == '-')
-			for(c=1; argv[i][c]; c++)
-			{	if(argv[i][c] == 'i' || argv[i][c] == 'I')
-					useIOS = true;
-				else if(argv[i][c] == 'd' || argv[i][c] == 'D')
-					__debug = true;
-			}
-		else if(argv[i][0] == '/')
-		{	*((u32*)(redirectedGecko+4)) = 0x016AE570;
-			*((u32*)(redirectedGecko+8)) = (u32)MEM_VIRTUAL_TO_PHYSICAL(argv[i]);
-			DCFlushRange(0x81200004, 32);
-			if(__debug) printf("Setting ppcboot location to %s.", argv[i]);
-		}
-	}
-	
+	u32 i;
+	CheckArguments(argc, argv);
 	if(__debug){
 		printf("Applying patches to IOS with AHBPROT\n");
 		printf("IosPatch_RUNTIME(...) returned %i\n", IosPatch_RUNTIME(true, false, false, true));
 		printf("ISFS_Initialize() returned %d\n", ISFS_Initialize());
 		printf("loadDOLfromNAND() returned %d .\n", loadDOLfromNAND("/title/00000001/00000200/content/00000003.app"));
 		printf("Setting magic word.\n");
-		*redirectedGecko = (char)(0);
-		*(redirectedGecko+1) = (char)(0);
-		*((u16*)(redirectedGecko+2)) = 0xDEB6;
+		redirectedGecko->str[0] = '\0';
+		redirectedGecko->str[1] = '\0';
+		redirectedGecko->debug_magic = 0xDEB6;
 		DCFlushRange(redirectedGecko, 32);
 	}else{
 		IosPatch_RUNTIME(true, false, false, false);
 		ISFS_Initialize();
 		if(loadDOLfromNAND("/title/00000001/00000200/content/00000003.app"))
+		{	
+			CHANGE_COLOR(RED);
 			printf("Load 1-512 from NAND failed.\n");
-		else printf("1-512 loaded from NAND.\n");
+			
+		} else {
+			CHANGE_COLOR(GREEN);
+			printf("1-512 loaded from NAND.\n");
+		}
+		CHANGE_COLOR(WHITE); // Restore default
 	}
-	if(useIOS){
-		// ** Boot mini from mem code by giantpune ** //
+	if(__useIOS){
+	
+			/** Boot mini from mem code by giantpune. **/
+	
+		if(__debug)printf("** Running Boot mini from mem code by giantpune. **\n");
+		
 		void *mini = memalign(32, armboot_size);  
 		if(!mini) 
 			  return 0;    
@@ -252,17 +272,22 @@ int main(int argc, char **argv) {
 
 		free(mini);
 	}else{
-		// ** boot mini without BootMii IOS code by Crediar ** //
+	
+			/** boot mini without BootMii IOS code by Crediar. **/
+	
+		if(__debug)
+			printf("** Running boot mini without BootMii IOS code by Crediar. **\n");
 
 		unsigned char ES_ImportBoot2[16] =
 		{
 			0x68, 0x4B, 0x2B, 0x06, 0xD1, 0x0C, 0x68, 0x8B, 0x2B, 0x00, 0xD1, 0x09, 0x68, 0xC8, 0x68, 0x42
 		};
-
+		if(__debug)printf("Searching for ES_ImportBoot2.\n");
+		
 		for( i = 0x939F0000; i < 0x939FE000; i+=2 )
-		{
+		{	
 			if( memcmp( (void*)(i), ES_ImportBoot2, sizeof(ES_ImportBoot2) ) == 0 )
-			{
+			{	if(__debug)printf("Found. Patching.\n");
 				DCInvalidateRange( (void*)i, 0x20 );
 				
 				*(vu32*)(i+0x00)	= 0x48034904;	// LDR R0, 0x10, LDR R1, 0x14
@@ -273,7 +298,9 @@ int main(int argc, char **argv) {
 				*(vu32*)(i+0x14)	= 0x0000FF01;	// version
 
 				DCFlushRange( (void*)i, 0x20 );
-
+				if(__debug)printf("Flushed. Shutting down IOS subsystems.\n");
+				__IOS_ShutdownSubsystems();
+				if(__debug)printf("Copying Mini into place.\n");
 				void *mini = (void*)0x90100000;
 				memcpy(mini, armboot, armboot_size);
 				DCFlushRange( mini, armboot_size );
@@ -291,16 +318,20 @@ int main(int argc, char **argv) {
 			}
 		}
 	}
-	if(__debug){
+	if(__debug) {
 		printf("Waiting for mini gecko output.\n");
+		char* miniDebug = (char*)redirectedGecko;
 		while(true)
-		{ do DCInvalidateRange(redirectedGecko, 32);
-		  while(!*redirectedGecko);
-		  printf(redirectedGecko);
-		  *redirectedGecko = (char)(0);
-		  DCFlushRange(redirectedGecko, 32);
+		{	do
+			{	// Repeat until *miniDebug != 0 ("")
+				DCInvalidateRange(miniDebug, 32);
+			} while(!*miniDebug);
+			
+			printf(miniDebug);
+			*miniDebug = '\0';
+			DCFlushRange(miniDebug, 32);
 		}
-	}else{
+	} else {
 		printf("Waiting for ARM to reset PPC.");
 	}
 	return 0;
