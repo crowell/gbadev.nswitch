@@ -43,7 +43,7 @@ armboot_config *redirectedGecko = (armboot_config*)0x81200000;
 
 // Check if string X is in current argument
 #define CHECK_ARG(X) (!strncmp((X), argv[i], sizeof((X))-1))
-#define CHECK_ARG_VAL(X) (argv[i] + sizeof((X)))
+#define CHECK_ARG_VAL(X) (argv[i] + sizeof((X))-1)
 #define DEBUG(...) if (__debug) printf(__VA_ARGS__)
 // Colors for debug output
 #define	RED		"\x1b[31;1m"
