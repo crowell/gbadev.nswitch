@@ -80,7 +80,7 @@ void CheckArguments(int argc, char **argv) {
 }
 
 static void disable_memory_protection() {
-	write32(MEM_PROT, read32(MEM_PROT) & 0x0000FFFF);
+	*(u32*)MEM_PROT = (*(u32*)MEM_PROT) & 0x0000FFFF;
 }
 
 static void initialize(GXRModeObj *rmode)
