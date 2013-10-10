@@ -39,6 +39,9 @@ struct armboot_config
 bool __debug = false;
 //bool __useIOS = true;
 armboot_config *redirectedGecko = (armboot_config*)0x81200000;
+#define MEM_REG_BASE 0xd8b4000
+#define MEM_PROT (MEM_REG_BASE + 0x20a)
+#define AHBPROT_DISABLED (*(vu32*)0xcd800064 == 0xFFFFFFFF)
 
 // Check if string X is in current argument
 #define CHECK_ARG(X) (!strncmp((X), argv[i], sizeof((X))-1))
@@ -76,12 +79,8 @@ void CheckArguments(int argc, char **argv) {
 	}
 }
 
-void disable_memory_protection()
-{
-	write16(MEM_PROT, 0);
-	write16(MEM_PROT_START, 0);
-	write16(MEM_PROT_END, 0);
-	delay(10);
+static void disable_memory_protection() {
+	write32(MEM_PROT, read32(MEM_PROT) & 0x0000FFFF);
 }
 
 static void initialize(GXRModeObj *rmode)
