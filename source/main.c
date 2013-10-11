@@ -32,6 +32,7 @@ typedef struct armboot_config armboot_config;
 struct armboot_config
 {	char str[2];		// character sent from armboot to be printed on screen
 	u16 debug_magic;	// set to 0xDEB6 if we want armboot to send us it's debug
+						// or set to 0xABCD if we jsut want armboot to send us it's normal output
 	u32 path_magic;		// set to 0x016AE570 if se are sending a custom ppcboot path
 	char buf[256]; // a buffer to put the string in where there will still be space for mini
 };
@@ -113,7 +114,8 @@ int main(int argc, char **argv) {
 	DEBUG("Setting magic word.\n");
 	redirectedGecko->str[0] = '\0';
 	redirectedGecko->str[1] = '\0';
-	redirectedGecko->debug_magic = 0xDEB6;
+	if(__debug) redirectedGecko->debug_magic = 0xDEB6;
+	else redirectedGecko->debug_magic = 0xABCD;
 	DCFlushRange(redirectedGecko, 32);
 	DEBUG("Shutting down IOS subsystems.\n");
 	__IOS_ShutdownSubsystems();
