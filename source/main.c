@@ -75,9 +75,9 @@ void CheckArguments(int argc, char **argv) {
 	{	redirectedGecko->path_magic = 0x016AE570;
 		DCFlushRange(redirectedGecko, 288);
 		free(pathToSet);
-		printf("Will dump nand.bin to %s .\n", newPath);
+		printf("Will dump NAND to %s .\n", newPath);
 	}
-	else printf("Will dump nand.bin to sd:/bootmii/nand.bin .\n");
+	else printf("Will dump NAND to sd:/bootmii/nand.bin .\n");
 }
 
 static void disable_memory_protection() {
