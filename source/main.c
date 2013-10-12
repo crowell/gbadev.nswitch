@@ -76,7 +76,7 @@ void CheckArguments(int argc, char **argv) {
 		DCFlushRange(redirectedGecko, 288);
 		printf("Will dump nand.bin to %s .\n", newPath);
 	}
-	else printf("Will dump nand.bin to sd:/bootmii/nand.bin .\n", newPath);
+	else printf("Will dump nand.bin to sd:/bootmii/nand.bin .\n");
 }
 
 static void disable_memory_protection() {
