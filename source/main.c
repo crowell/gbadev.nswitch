@@ -25,6 +25,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <malloc.h>
+#include <ogc/machine/processor.h>
 
 #include "armboot.h"
 
@@ -38,7 +39,6 @@ struct armboot_config
 };
 
 bool __debug = false;
-//bool __useIOS = true;
 armboot_config *redirectedGecko = (armboot_config*)0x81200000;
 #define MEM_REG_BASE 0xd8b4000
 #define MEM_PROT (MEM_REG_BASE + 0x20a)
@@ -70,18 +70,17 @@ void CheckArguments(int argc, char **argv) {
 			__debug = atoi(CHECK_ARG_VAL("debug="));
 		else if ( pathSet |= (CHECK_ARG("path=")) )
 			strcpy(newPath, CHECK_ARG_VAL("path="));
-/*		else if (CHECK_ARG("bootmii="))
-			__useIOS = atoi(CHECK_ARG_VAL("bootmii="));*/
 	}
 	if(pathSet)
 	{	redirectedGecko->path_magic = 0x016AE570;
 		DCFlushRange(redirectedGecko, 288);
-		DEBUG("Setting nand.bin location to %s.\n", newPath);
+		printf("Will dump nand.bin to %s .\n", newPath);
 	}
+	else printf("Will dump nand.bin to sd:/bootmii/nand.bin .\n", newPath);
 }
 
 static void disable_memory_protection() {
-	*(u32*)MEM_PROT = (*(u32*)MEM_PROT) & 0x0000FFFF;
+	write32(MEM_PROT, read32(MEM_PROT) & 0x0000FFFF);
 }
 
 static void initialize(GXRModeObj *rmode)
@@ -117,37 +116,10 @@ int main(int argc, char **argv) {
 	if(__debug) redirectedGecko->debug_magic = 0xDEB6;
 	else redirectedGecko->debug_magic = 0xABCD;
 	DCFlushRange(redirectedGecko, 32);
+	
 	DEBUG("Shutting down IOS subsystems.\n");
 	__IOS_ShutdownSubsystems();
-	if(!AHBPROT_DISABLED){
-	
-			/** Boot mini from mem code by giantpune. **/
-	
-		DEBUG("** Running Boot mini from mem code by giantpune. **\n");
-		
-		void *mini = memalign(32, armboot_size);  
-		if(!mini) 
-			  return 0;    
-		
-		memcpy(mini, armboot, armboot_size);  
-		DCFlushRange(mini, armboot_size);               
-
-		*(u32*)0xc150f000 = 0x424d454d;  
-		asm volatile("eieio");  
-
-		*(u32*)0xc150f004 = MEM_VIRTUAL_TO_PHYSICAL(mini);  
-		asm volatile("eieio");
-
-		tikview views[4] ATTRIBUTE_ALIGN(32);
-		printf("Loading IOS 254.\n");
-		__ES_Init();
-		u32 numviews;
-		ES_GetNumTicketViews(0x00000001000000FEULL, &numviews);
-		ES_GetTicketViews(0x00000001000000FEULL, views, numviews);
-		ES_LaunchTitleBackground(0x00000001000000FEULL, &views[0]);
-
-		free(mini);
-	}else{
+	if(AHBPROT_DISABLED){
 	
 			/** boot mini without BootMii IOS code by Crediar. **/
 	
@@ -191,6 +163,34 @@ int main(int argc, char **argv) {
 				break;
 			}
 		}
+	}else{
+	
+			/** Boot mini from mem code by giantpune. **/
+	
+		DEBUG("** Running Boot mini from mem code by giantpune. **\n");
+		
+		void *mini = memalign(32, armboot_size);  
+		if(!mini) 
+			  return 0;    
+		
+		memcpy(mini, armboot, armboot_size);  
+		DCFlushRange(mini, armboot_size);               
+
+		*(u32*)0xc150f000 = 0x424d454d;  
+		asm volatile("eieio");  
+
+		*(u32*)0xc150f004 = MEM_VIRTUAL_TO_PHYSICAL(mini);  
+		asm volatile("eieio");
+
+		tikview views[4] ATTRIBUTE_ALIGN(32);
+		printf("Loading IOS 254.\n");
+		__ES_Init();
+		u32 numviews;
+		ES_GetNumTicketViews(0x00000001000000FEULL, &numviews);
+		ES_GetTicketViews(0x00000001000000FEULL, views, numviews);
+		ES_LaunchTitleBackground(0x00000001000000FEULL, &views[0]);
+
+		free(mini);
 	}
 	DEBUG("Waiting for mini gecko output.\n");
 	char* miniDebug = redirectedGecko->str;
