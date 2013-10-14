@@ -59,24 +59,25 @@ armboot_config *redirectedGecko = (armboot_config*)0x81200000;
 
 void CheckArguments(int argc, char **argv) {
 	int i;
-	bool pathSet = false;
+	char*pathToSet = 0;
 	char*newPath = redirectedGecko->buf;
-	if(( pathSet = (argv[0][0] == 's' || argv[0][0] == 'S') )) // Make sure you're using an SD card
-	{	*strrchr(argv[0], '/') = '\0';
-		snprintf(newPath, sizeof(redirectedGecko->buf), "%s/nand.bin", argv[0]+3);
+	if(argv[0][0] == 's' || argv[0][0] == 'S') // Make sure you're using an SD card
+	{	pathToSet = strndup(argv[0] + 3, strrchr(argv[0], '/') - argv[0] - 3);
+		snprintf(newPath, sizeof(redirectedGecko->buf), "%s/ppcboot.elf", pathToSet);
 	}
 	for (i = 1; i < argc; i++)
 	{	if (CHECK_ARG("debug="))
 			__debug = atoi(CHECK_ARG_VAL("debug="));
-		else if ( pathSet |= (CHECK_ARG("path=")) )
-			strcpy(newPath, CHECK_ARG_VAL("path="));
+		else if (CHECK_ARG("path="))
+			pathToSet = strcpy(newPath, CHECK_ARG_VAL("path="));
 	}
-	if(pathSet)
+	if(pathToSet)
 	{	redirectedGecko->path_magic = 0x016AE570;
 		DCFlushRange(redirectedGecko, 288);
-		printf("Will dump nand.bin to %s .\n", newPath);
+		free(pathToSet);
+		printf("Will dump NAND to %s .\n", newPath);
 	}
-	else printf("Will dump nand.bin to sd:/bootmii/nand.bin .\n", newPath);
+	else printf("Will dump NAND to sd:/bootmii/nand.bin .\n");
 }
 
 static void disable_memory_protection() {
