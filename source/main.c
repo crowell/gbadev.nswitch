@@ -63,7 +63,7 @@ void CheckArguments(int argc, char **argv) {
 	char*newPath = redirectedGecko->buf;
 	if(argv[0][0] == 's' || argv[0][0] == 'S') // Make sure you're using an SD card
 	{	pathToSet = strndup(argv[0] + 3, strrchr(argv[0], '/') - argv[0] - 3);
-		snprintf(newPath, sizeof(redirectedGecko->buf), "%s/ppcboot.elf", pathToSet);
+		snprintf(newPath, sizeof(redirectedGecko->buf), "%s/nand.bin", pathToSet);
 	}
 	for (i = 1; i < argc; i++)
 	{	if (CHECK_ARG("debug="))
