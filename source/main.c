@@ -33,9 +33,9 @@ typedef struct armboot_config armboot_config;
 struct armboot_config
 {	char str[2];		// character sent from armboot to be printed on screen
 	u16 debug_magic;	// set to 0xDEB6 if we want armboot to send us it's debug
-						// or set to 0xABCD if we jsut want armboot to send us it's normal output
-	u32 path_magic;		// set to 0x016AE570 if se are sending a custom ppcboot path
-	char buf[256]; // a buffer to put the string in where there will still be space for mini
+						// or set to 0xABCD if we just want armboot to send us it's normal output
+	u32 path_magic;		// set to 0x016AE570 if we are sending a custom ppcboot path
+	char buf[256];		// a buffer to put the nand.bin path string in
 };
 
 bool __debug = false;
