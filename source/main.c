@@ -27,19 +27,7 @@
 #include <malloc.h>
 #include <ogc/machine/processor.h>
 
-#include "armboot.h"
-
-typedef struct armboot_config armboot_config;
-struct armboot_config
-{	char str[2];		// character sent from armboot to be printed on screen
-	u16 debug_magic;	// set to 0xDEB6 if we want armboot to send us it's debug
-						// or set to 0xABCD if we just want armboot to send us it's normal output
-	u32 path_magic;		// set to 0x016AE570 if we are sending a custom ppcboot path
-	char buf[256];		// a buffer to put the nand.bin path string in
-};
-
-bool __debug = false;
-armboot_config *redirectedGecko = (armboot_config*)0x81200000;
+bool __debug = true;
 #define MEM_REG_BASE 0xd8b4000
 #define MEM_PROT (MEM_REG_BASE + 0x20a)
 #define AHBPROT_DISABLED (*(vu32*)0xcd800064 == 0xFFFFFFFF)
@@ -56,7 +44,7 @@ armboot_config *redirectedGecko = (armboot_config*)0x81200000;
 
 // Remeber to set it back to WHITE when you're done
 #define CHANGE_COLOR(X)	(printf((X)))
-
+/*
 void CheckArguments(int argc, char **argv) {
 	int i;
 	char*pathToSet = 0;
@@ -79,7 +67,7 @@ void CheckArguments(int argc, char **argv) {
 	}
 	else printf("Will dump NAND to sd:/bootmii/nand.bin .\n");
 }
-
+*/
 static void disable_memory_protection() {
 	write32(MEM_PROT, read32(MEM_PROT) & 0x0000FFFF);
 }
@@ -110,13 +98,7 @@ int main(int argc, char **argv) {
 	initialize(rmode);
 	printf("\n\n\n");
 	u32 i;
-	CheckArguments(argc, argv);
-	DEBUG("Setting magic word.\n");
-	redirectedGecko->str[0] = '\0';
-	redirectedGecko->str[1] = '\0';
-	if(__debug) redirectedGecko->debug_magic = 0xDEB6;
-	else redirectedGecko->debug_magic = 0xABCD;
-	DCFlushRange(redirectedGecko, 32);
+//	CheckArguments(argc, argv);
 	
 	DEBUG("Shutting down IOS subsystems.\n");
 	__IOS_ShutdownSubsystems();
@@ -136,71 +118,54 @@ int main(int argc, char **argv) {
 		{	
 			if( memcmp( (void*)(i), ES_ImportBoot2, sizeof(ES_ImportBoot2) ) == 0 )
 			{	DEBUG("Found. Patching.\n");
-				DCInvalidateRange( (void*)i, 0x20 );
+				DCInvalidateRange( (void*)i, 0x80 );
 				
-				*(vu32*)(i+0x00)	= 0x48034904;	// LDR R0, 0x10, LDR R1, 0x14
-				*(vu32*)(i+0x04)	= 0x477846C0;	// BX PC, NOP
-				*(vu32*)(i+0x08)	= 0xE6000870;	// SYSCALL
-				*(vu32*)(i+0x0C)	= 0xE12FFF1E;	// BLR
-				*(vu32*)(i+0x10)	= 0x10100000;	// offset
-				*(vu32*)(i+0x14)	= 0x0000FF01;	// version
+				*(vu32*)(i+0x00)	= 0x477846C0;	// BX PC, NOP (get out of Thumb mode)
+				*(vu32*)(i+0x04)	= 0xE6000B30;	// load_PPC (syscall 0x59)
+				*(vu32*)(i+0x08)	= 0xE59F0044;	// r0 = ARG1 (0x1330100 ... PC+68)
+				*(vu32*)(i+0x0c)	= 0xE5902000;	// r2 = read32(0x1330100)
+				*(vu32*)(i+0x10)	= 0xE59F003C;	// r0 = ARG1 (PC+60)	<===--- LOOPSTART
+				*(vu32*)(i+0x14)	= 0xE3A01020;	// MOV r1 0x20 (ARG2)
+				*(vu32*)(i+0x18)	= 0xE60007F0;	// sync_before_read(0x1330100,32) (syscall 0x3F)
+				*(vu32*)(i+0x1c)	= 0xE59F0030;	// r0 = ARG1 (PC+48)
+				*(vu32*)(i+0x20)	= 0xE5903000;	// r3 = read32(0x1330100)
+				*(vu32*)(i+0x24)	= 0xE1520003;	// compare r2 r3
+				*(vu32*)(i+0x28)	= 0x0AFFFFF8;	// BEQ LOOPSTART		<===---
+				*(vu32*)(i+0x2c)	= 0xE59F0020;	// r0 = ARG1 (PC+32)
+				*(vu32*)(i+0x30)	= 0xE59F1020;	// r1 = PPC1 (PC+32)
+				*(vu32*)(i+0x34)	= 0xE5801000;	// write32(r0, r1)
+				*(vu32*)(i+0x38)	= 0xE59F101C;	// r1 = PPC2 (PC+28)
+				*(vu32*)(i+0x3c)	= 0xE5801004;	// write32(r0+4, r1)
+				*(vu32*)(i+0x40)	= 0xE59F1018;	// r1 = PPC3 (PC+24)
+				*(vu32*)(i+0x44)	= 0xE5801008;	// write32(r0+8, r1)
+				*(vu32*)(i+0x48)	= 0xE3A01020;	// MOV r1 0x20 (ARG2)
+				*(vu32*)(i+0x4c)	= 0xE6000810;	// sync_after_write(0x1330100,32)
+				*(vu32*)(i+0x50)	= 0xE12FFF1E;	// BLR
+				*(vu32*)(i+0x54)	= 0x01330100;	//				<===--- ARG1
+				*(vu32*)(i+0x58)	= 0x38802000;	// li r4, 0x2000<===--- PPC1
+				*(vu32*)(i+0x5c)	= 0x7c800124;	// mtmsr r4		<===--- PPC2
+				*(vu32*)(i+0x60)	= 0x48001802;	// b 0x1800		<===--- PPC3 (assuming init stub is at 0x1800)
 
-				DCFlushRange( (void*)i, 0x20 );
-				DEBUG("Copying Mini into place.\n");
-				void *mini = (void*)0x90100000;
-				memcpy(mini, armboot, armboot_size);
-				DCFlushRange( mini, armboot_size );
+				DCFlushRange( (void*)i, 0x80 );
 				
 				s32 fd = IOS_Open( "/dev/es", 0 );
 				
 				u8 *buffer = (u8*)memalign( 32, 0x100 );
 				memset( buffer, 0, 0x100 );
 				
-				if(__debug){
+				/*if(__debug){
 					printf("ES_ImportBoot():%d\n", IOS_IoctlvAsync( fd, 0x1F, 0, 0, (ioctlv*)buffer, NULL, NULL ) );
-				}else{
+				}else{*/
 					IOS_IoctlvAsync( fd, 0x1F, 0, 0, (ioctlv*)buffer, NULL, NULL );
+				//}
+				while(1)
+				{	DCInvalidateRange( (void*)0x81330100, 0x20 );
+					printf("0x%08x ",*(u32*)0x81330100);
 				}
 				break;
 			}
 		}
-	}else{
-	
-			/** Boot mini from mem code by giantpune. **/
-	
-		DEBUG("** Running Boot mini from mem code by giantpune. **\n");
-		
-		void *mini = memalign(32, armboot_size);  
-		if(!mini) 
-			  return 0;    
-		
-		memcpy(mini, armboot, armboot_size);  
-		DCFlushRange(mini, armboot_size);               
-
-		*(u32*)0xc150f000 = 0x424d454d;  
-		asm volatile("eieio");  
-
-		*(u32*)0xc150f004 = MEM_VIRTUAL_TO_PHYSICAL(mini);  
-		asm volatile("eieio");
-
-		tikview views[4] ATTRIBUTE_ALIGN(32);
-		printf("Loading IOS 254.\n");
-		__ES_Init();
-		u32 numviews;
-		ES_GetNumTicketViews(0x00000001000000FEULL, &numviews);
-		ES_GetTicketViews(0x00000001000000FEULL, views, numviews);
-		ES_LaunchTitleBackground(0x00000001000000FEULL, &views[0]);
-
-		free(mini);
-	}
-	DEBUG("Waiting for mini gecko output.\n");
-	char* miniDebug = redirectedGecko->str;
-	while(!miniDebug[1])
-	{	do DCInvalidateRange(miniDebug, 0x120);
-		while(!*miniDebug);
-		printf(redirectedGecko->buf);
-		*miniDebug = '\0';
-		DCFlushRange(miniDebug, 32);
-	}
+	}//else
+	printf("No AHB Access (needs AHBPROT disabled) exiting.\n");
 	return 0;
 }
