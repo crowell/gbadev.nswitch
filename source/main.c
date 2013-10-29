@@ -149,7 +149,7 @@ int main(int argc, char **argv) {
 				*(vu32*)(i+0x5c)	= 0x38802000;	// li r4, 0x2000<===--- PPC1
 				*(vu32*)(i+0x60)	= 0x7c800124;	// mtmsr r4		<===--- PPC2
 				*(vu32*)(i+0x64)	= 0x48001802;	// b 0x1800		<===--- PPC3 (assuming init stub is at 0x1800)
-				*(vu32*)(i+0x64)	= (vu32)MEM_VIRTUAL_TO_PHYSICAL(&path);
+				*(vu32*)(i+0x68)	= (vu32)MEM_VIRTUAL_TO_PHYSICAL(&path);
 
 				DCFlushRange( (void*)i, 0x80 );
 				
