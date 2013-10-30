@@ -196,9 +196,9 @@ int main(int argc, char **argv) {
 	DEBUG("Waiting for mini gecko output.\n");
 	char* miniDebug = redirectedGecko->str;
 	while(!miniDebug[1])
-	{	do DCInvalidateRange(miniDebug, 0x120);
+	{	do DCInvalidateRange(miniDebug, 32);
 		while(!*miniDebug);
-		printf(redirectedGecko->buf);
+		printf(miniDebug);
 		*miniDebug = '\0';
 		DCFlushRange(miniDebug, 32);
 	}
