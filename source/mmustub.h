@@ -1,4 +1,4 @@
-const u32 stub_1800_1_512[] =
+const u32 stub_1800_1_512[] __attribute__ ((aligned(32))) =
 {
 
 //check_pvr_hi r4, 0x7001
@@ -216,7 +216,7 @@ const u32 stub_1800_1_512[] =
 //set_srr0 r3, __KernelInit
 //no instruction at 0x1a50 in megazig code so...?
     /*[148] 0x1a50*/, 0x60000000 //nop										original 0x3c608133
-    /*[149] 0x1a54*/,	0x60633400 //ori     r3,r3,13312		/* 0x3400 */	original 0x60630400
+    /*[149] 0x1a54*/,	0x60631800 //ori     r3,r3,6144  	/* 0x1800 */	original 0x60630400
     /*[150] 0x1a58*/, 0x7c7a03a6 //mtsrr0  r3
 
 //so loading entry where original loaded kernel...
