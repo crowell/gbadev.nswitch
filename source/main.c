@@ -127,14 +127,14 @@ int main(int argc, char **argv) {
 			if( memcmp( (void*)(i), ES_ImportBoot2, sizeof(ES_ImportBoot2) ) == 0 )
 			{	DEBUG("Found. Patching.\n");
 				DCInvalidateRange( (void*)i, 0x80 );
- 				// to avoid having to make too many adjustments to the ARM ASM below, I'll jump to a stub here.
- ﻿				// 0x80000100 is overwritten by the bootrom with an infinite loop so we'll skip that address.
- ﻿				*(u32*)0x80000104 = 0x3c600000 | reentry >> 16; // lis r3, entry@h
- ﻿				*(u32*)0x80000108 = 0x60630000 | (reentry & 0xffff); // ori r3, r3, entry@l
- ﻿				*(u32*)0x8000010C = 0x7c7a03a6; // mtsrr0 r3
- ﻿				*(u32*)0x80000100 = 0x38600000; // li r3, 0
- ﻿				*(u32*)0x80000100 = 0x7c7b03a6; // mtsrr1 r3
- ﻿				*(u32*)0x80000100 = 0x4c000064; // rfi
+				// to avoid having to make too many adjustments to the ARM ASM below, I'll jump to a stub here.
+				// 0x80000100 is overwritten by the bootrom with an infinite loop so we'll skip that address.
+				*(u32*)0x80000104 = 0x3c600000 | reentry >> 16; // lis r3, entry@h
+				*(u32*)0x80000108 = 0x60630000 | (reentry & 0xffff); // ori r3, r3, entry@l
+				*(u32*)0x8000010C = 0x7c7a03a6; // mtsrr0 r3
+				*(u32*)0x80000100 = 0x38600000; // li r3, 0
+				*(u32*)0x80000100 = 0x7c7b03a6; // mtsrr1 r3
+				*(u32*)0x80000100 = 0x4c000064; // rfi
 				
 				PATCH(i, 0x477846C0)   // BX PC, NOP (get out of Thumb mode)
 				PATCH(i, 0xE59F0060)   // r0 = &path (PC+96)
