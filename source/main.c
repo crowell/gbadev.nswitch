@@ -129,23 +129,23 @@ int main(int argc, char **argv) {
 				DCInvalidateRange( (void*)i, 0x80 );
 				
 				PATCH(i, 0x477846C0)   // BX PC, NOP (get out of Thumb mode)
-				PATCH(i, 0xE59F005C)   // r0 = &path (PC+92)
+				PATCH(i, 0xE59F0060)   // r0 = &path (PC+96)
 				PATCH(i, 0xE6000830)   // boot_PPC(path) (syscall 0x41)
-				PATCH(i, 0xE59F0044)   // r0 = ARG1 (0x1330100 ... PC+68)
+				PATCH(i, 0xE59F0048)   // r0 = ARG1 (0x1330100 ... PC+72)
 				PATCH(i, 0xE5902000)   // r2 = read32(0x1330100)
-				PATCH(i, 0xE59F003C)   // r0 = ARG1 (PC+60)    <===--- LOOPSTART
+				PATCH(i, 0xE59F0040)   // r0 = ARG1 (PC+64)    <===--- LOOPSTART
 				PATCH(i, 0xE3A01020)   // MOV r1 0x20 (ARG2)
 				PATCH(i, 0xE60007F0)   // sync_before_read(0x1330100,32) (syscall 0x3F)
-				PATCH(i, 0xE59F0030)   // r0 = ARG1 (PC+48)
+				PATCH(i, 0xE59F0034)   // r0 = ARG1 (PC+52)
 				PATCH(i, 0xE5903000)   // r3 = read32(0x1330100)
 				PATCH(i, 0xE1520003)   // compare r2 r3
 				PATCH(i, 0x0AFFFFF8)   // BEQ LOOPSTART                <===---
-				PATCH(i, 0xE59F0020)   // r0 = ARG1 (PC+32)
-				PATCH(i, 0xE59F1020)   // r1 = PPC1 (PC+32)
+				PATCH(i, 0xE59F0024)   // r0 = ARG1 (PC+36)
+				PATCH(i, 0xE59F1024)   // r1 = PPC1 (PC+36)
 				PATCH(i, 0xE5801000)   // write32(r0, r1)
-				PATCH(i, 0xE59F101C)   // r1 = PPC2 (PC+28)
+				PATCH(i, 0xE59F1020)   // r1 = PPC2 (PC+32)
 				PATCH(i, 0xE5801004)   // write32(r0+4, r1)
-				PATCH(i, 0xE59F1018)   // r1 = PPC3 (PC+24)
+				PATCH(i, 0xE59F101C)   // r1 = PPC3 (PC+28)
 				PATCH(i, 0xE5801008)   // write32(r0+8, r1)
 				PATCH(i, 0xE3A01020)   // MOV r1 0x20 (ARG2)
 				PATCH(i, 0xE6000810)   // sync_after_write(0x1330100,32)
