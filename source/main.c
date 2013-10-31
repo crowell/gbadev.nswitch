@@ -51,7 +51,7 @@ static char path[38] = "/title/00000001/00000200/00000003.app";
 #define PATCH(I,X)	DEBUG( "%08x:%08x -> ", (I), *(vu32*)(I) ); \
 					*(vu32*)(I) = (X); \
 					DEBUG( "%08x\n", *(vu32*)(I) ); \
-					+=4;
+					(I)+=4;
 /*
 void CheckArguments(int argc, char **argv) {
 	int i;
