@@ -204,9 +204,6 @@ int main(int argc, char **argv) {
 				DEBUG("%08x\n", *(vu32*)i);
 				i+=4;
 				DEBUG("%08x %08x -> ", i, *(vu32*)i);
-				DEBUG("%08x\n", *(vu32*)i);
-				i+=4;
-				DEBUG("%08x %08x -> ", i, *(vu32*)i);
 				*(vu32*)i	= 0xE6000810;	// sync_after_write(0x1330100,32)
 				DEBUG("%08x\n", *(vu32*)i);
 				i+=4;
