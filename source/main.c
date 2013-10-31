@@ -123,33 +123,116 @@ int main(int argc, char **argv) {
 			{	DEBUG("Found. Patching.\n");
 				DCInvalidateRange( (void*)i, 0x80 );
 				
-				*(vu32*)(i+0x00)	= 0x477846C0;	// BX PC, NOP (get out of Thumb mode)
-				*(vu32*)(i+0x04)	= 0xE59F005C;	// r0 = &path (PC+92)
-				*(vu32*)(i+0x08)	= 0xE6000830;	// boot_PPC(path) (syscall 0x41)
-				*(vu32*)(i+0x0c)	= 0xE59F0044;	// r0 = ARG1 (0x1330100 ... PC+68)
-				*(vu32*)(i+0x10)	= 0xE5902000;	// r2 = read32(0x1330100)
-				*(vu32*)(i+0x14)	= 0xE59F003C;	// r0 = ARG1 (PC+60)	<===--- LOOPSTART
-				*(vu32*)(i+0x18)	= 0xE3A01020;	// MOV r1 0x20 (ARG2)
-				*(vu32*)(i+0x1c)	= 0xE60007F0;	// sync_before_read(0x1330100,32) (syscall 0x3F)
-				*(vu32*)(i+0x20)	= 0xE59F0030;	// r0 = ARG1 (PC+48)
-				*(vu32*)(i+0x24)	= 0xE5903000;	// r3 = read32(0x1330100)
-				*(vu32*)(i+0x28)	= 0xE1520003;	// compare r2 r3
-				*(vu32*)(i+0x2c)	= 0x0AFFFFF8;	// BEQ LOOPSTART		<===---
-				*(vu32*)(i+0x30)	= 0xE59F0020;	// r0 = ARG1 (PC+32)
-				*(vu32*)(i+0x34)	= 0xE59F1020;	// r1 = PPC1 (PC+32)
-				*(vu32*)(i+0x38)	= 0xE5801000;	// write32(r0, r1)
-				*(vu32*)(i+0x3c)	= 0xE59F101C;	// r1 = PPC2 (PC+28)
-				*(vu32*)(i+0x40)	= 0xE5801004;	// write32(r0+4, r1)
-				*(vu32*)(i+0x44)	= 0xE59F1018;	// r1 = PPC3 (PC+24)
-				*(vu32*)(i+0x48)	= 0xE5801008;	// write32(r0+8, r1)
-				*(vu32*)(i+0x4c)	= 0xE3A01020;	// MOV r1 0x20 (ARG2)
-				*(vu32*)(i+0x50)	= 0xE6000810;	// sync_after_write(0x1330100,32)
-				*(vu32*)(i+0x54)	= 0xE12FFF1E;	// BLR
-				*(vu32*)(i+0x58)	= 0x01330100;	//				<===--- ARG1
-				*(vu32*)(i+0x5c)	= 0x38802000;	// li r4, 0x2000<===--- PPC1
-				*(vu32*)(i+0x60)	= 0x7c800124;	// mtmsr r4		<===--- PPC2
-				*(vu32*)(i+0x64)	= 0x48001802;	// b 0x1800		<===--- PPC3 (assuming init stub is at 0x1800)
-				*(vu32*)(i+0x68)	= (vu32)MEM_VIRTUAL_TO_PHYSICAL(&path);
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0x477846C0;	// BX PC, NOP (get out of Thumb mode)
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0xE59F005C;	// r0 = &path (PC+92)
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0xE6000830;	// boot_PPC(path) (syscall 0x41)
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0xE59F0044;	// r0 = ARG1 (0x1330100 ... PC+68)
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0xE5902000;	// r2 = read32(0x1330100)
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0xE59F003C;	// r0 = ARG1 (PC+60)	<===--- LOOPSTART
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0xE3A01020;	// MOV r1 0x20 (ARG2)
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0xE60007F0;	// sync_before_read(0x1330100,32) (syscall 0x3F)
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0xE59F0030;	// r0 = ARG1 (PC+48)
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0xE5903000;	// r3 = read32(0x1330100)
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0xE1520003;	// compare r2 r3
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0x0AFFFFF8;	// BEQ LOOPSTART		<===---
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0xE59F0020;	// r0 = ARG1 (PC+32)
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0xE59F1020;	// r1 = PPC1 (PC+32)
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0xE5801000;	// write32(r0, r1)
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0xE59F101C;	// r1 = PPC2 (PC+28)
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0xE5801004;	// write32(r0+4, r1)
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0xE59F1018;	// r1 = PPC3 (PC+24)
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0xE5801008;	// write32(r0+8, r1)
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0xE3A01020;	// MOV r1 0x20 (ARG2)
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0xE6000810;	// sync_after_write(0x1330100,32)
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0xE12FFF1E;	// BLR
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0x01330100;	//				<===--- ARG1
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0x38802000;	// li r4, 0x2000<===--- PPC1
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0x7c800124;	// mtmsr r4		<===--- PPC2
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= 0x48001802;	// b 0x1800		<===--- PPC3 (assuming init stub is at 0x1800)
+				DEBUG("%08x\n", *(vu32*)i);
+				i+=4;
+				DEBUG("%08x %08x -> ", i, *(vu32*)i);
+				*(vu32*)i	= (vu32)MEM_VIRTUAL_TO_PHYSICAL(&path);
+				DEBUG("%08x\n", *(vu32*)i);
 
 				DCFlushRange( (void*)i, 0x80 );
 				
