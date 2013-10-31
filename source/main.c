@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
 	rmode = VIDEO_GetPreferredMode(NULL);
 	initialize(rmode);
 	printf("\n\n\n");
-	u32 i;
+	u32 i, reentry = (u32)stub_1800_1_512;
 //	CheckArguments(argc, argv);
 	
 	DEBUG("Shutting down IOS subsystems.\n");
@@ -127,6 +127,14 @@ int main(int argc, char **argv) {
 			if( memcmp( (void*)(i), ES_ImportBoot2, sizeof(ES_ImportBoot2) ) == 0 )
 			{	DEBUG("Found. Patching.\n");
 				DCInvalidateRange( (void*)i, 0x80 );
+ 				// to avoid having to make too many adjustments to the ARM ASM below, I'll jump to a stub here.
+ ﻿				// 0x80000100 is overwritten by the bootrom with an infinite loop so we'll skip that address.
+ ﻿				*(u32*)0x80000104 = 0x3c600000 | reentry >> 16; // lis r3, entry@h
+ ﻿				*(u32*)0x80000108 = 0x60630000 | (reentry & 0xffff); // ori r3, r3, entry@l
+ ﻿				*(u32*)0x8000010C = 0x7c7a03a6; // mtsrr0 r3
+ ﻿				*(u32*)0x80000100 = 0x38600000; // li r3, 0
+ ﻿				*(u32*)0x80000100 = 0x7c7b03a6; // mtsrr1 r3
+ ﻿				*(u32*)0x80000100 = 0x4c000064; // rfi
 				
 				PATCH(i, 0x477846C0)   // BX PC, NOP (get out of Thumb mode)
 				PATCH(i, 0xE59F0060)   // r0 = &path (PC+96)
@@ -153,7 +161,7 @@ int main(int argc, char **argv) {
 				PATCH(i, 0x01330100)   //                              <===--- ARG1
 				PATCH(i, 0x38802000)   // li r4, 0x2000<===--- PPC1
 				PATCH(i, 0x7c800124)   // mtmsr r4             <===--- PPC2
-				PATCH(i, 0x48001802)   // b 0x1800             <===--- PPC3 (assuming init stub is at 0x1800)
+				PATCH(i, 0x48000106)   // b 0x104             <===--- PPC3
 				PATCH(i, (vu32)MEM_VIRTUAL_TO_PHYSICAL(&path))
 
 				DCFlushRange( (void*)i, 0x80 );
@@ -177,7 +185,6 @@ int main(int argc, char **argv) {
 				break;
 			}
 		}
-	}//else
-	printf("No AHB Access (needs AHBPROT disabled) exiting.\n");
+	}else printf("No AHB Access (needs AHBPROT disabled) exiting.\n");
 	return 0;
 }
