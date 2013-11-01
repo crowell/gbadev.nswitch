@@ -30,7 +30,7 @@
 #include "mmustub.h"
 
 bool __debug = true;
-static char* = (char*)0x81200000;
+static char* path = (char*)0x81200000;
 #define MEM_REG_BASE 0xd8b4000
 #define MEM_PROT (MEM_REG_BASE + 0x20a)
 #define AHBPROT_DISABLED (*(vu32*)0xcd800064 == 0xFFFFFFFF)
