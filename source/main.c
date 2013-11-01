@@ -30,7 +30,7 @@
 #include "mmustub.h"
 
 bool __debug = true;
-static char path[38] = "/title/00000001/00000200/00000003.app";
+static char* = (char*)0x81200000;
 #define MEM_REG_BASE 0xd8b4000
 #define MEM_PROT (MEM_REG_BASE + 0x20a)
 #define AHBPROT_DISABLED (*(vu32*)0xcd800064 == 0xFFFFFFFF)
@@ -106,10 +106,9 @@ int main(int argc, char **argv) {
 	initialize(rmode);
 	printf("\n\n\n");
 	u32 i, reentry = (u32)stub_1800_1_512;
+	strcpy(path, "/title/00000001/00000200/00000003.app");
 //	CheckArguments(argc, argv);
 	
-	DEBUG("Shutting down IOS subsystems.\n");
-	__IOS_ShutdownSubsystems();
 	if(AHBPROT_DISABLED){
 	
 			/** boot mini without BootMii IOS code by Crediar. **/
@@ -126,7 +125,6 @@ int main(int argc, char **argv) {
 		{	
 			if( memcmp( (void*)(i), ES_ImportBoot2, sizeof(ES_ImportBoot2) ) == 0 )
 			{	DEBUG("Found. Patching.\n");
-				DCInvalidateRange( (void*)i, 224 );
 				// to avoid having to make too many adjustments to the ARM ASM below, I'll jump to a stub here.
 				// 0x80000100 is overwritten by the bootrom with an infinite loop so we'll skip that address.
 				*(u32*)0x80000104 = 0x3c600000 | reentry >> 16; // lis r3, entry@h
@@ -138,39 +136,19 @@ int main(int argc, char **argv) {
 				__debug = false;
 				reentry = i;
 				
+				DCInvalidateRange( (void*)i, 128 );
 				PATCH(i, 0x477846C0)	// BX PC, NOP (get out of Thumb mode)
-				PATCH(i, 0xE59F00A0)	// r0 = ARG1 (0x1330100 ... PC+160)
-				PATCH(i, 0xE5903000)	// r3 = read32(0x1330100)
-				PATCH(i, 0xE59F00AC)	// r0 = reset (HW_RESETS ... PC+172)
-				PATCH(i, 0xE5901000)	// r1 = read32(HW_RESETS)
-				PATCH(i, 0xE3C11030)	// r1 &= ~0x30 ? (BIC)
-				PATCH(i, 0xE5801000)	// write32(r0, r1)
-				PATCH(i, 0xE59F2098)	// r2 = timer (HW_TIMER ... PC+152)
-				PATCH(i, 0xE5921000)	// r1 = read32(HW_TIMER)
-				PATCH(i, 0xE28110BE)	// r1 += 190;
-				PATCH(i, 0xE5920000)	// r0 = read32(HW_TIMER)
-				PATCH(i, 0xE1510000)	// compare r1 r0
-				PATCH(i, 0xCAFFFFFC)	// if(>) goto loopstart;
-				PATCH(i, 0xE59F0084)	// r0 = reset (HW_RESETS ... PC+132)
-				PATCH(i, 0xE5901000)	// r1 = read32(HW_RESETS)
-				PATCH(i, 0xE3811020)	// r1 |= 0x20
-				PATCH(i, 0xE5801000)	// write32(r0, r1)
-				PATCH(i, 0xE5921000)	// r1 = read32(HW_TIMER)
-				PATCH(i, 0xE28110BE)	// r1 += 190
-				PATCH(i, 0xE5920000)	// r0 = read32(HW_TIMER)
-				PATCH(i, 0xE1510000)	// compare r1 r0
-				PATCH(i, 0xCAFFFFFC)	// if(>) goto loopstart0;
-				PATCH(i, 0xE59F0060)	// r0 = reset (HW_RESETS ... PC+96)
-				PATCH(i, 0xE5901000)	// r1 = read32(HW_RESETS)
-				PATCH(i, 0xE3811010)	// r1 |= 0x10
-				PATCH(i, 0xE5801000)	// write32(r0, r1)
-				PATCH(i, 0xE59F003C)	// r0 = ARG1 (PC+60)    <===--- LOOPSTART1
+				PATCH(i, 0xE59F005C)	// r0 = &path (PC+92)
+				PATCH(i, 0xE6000830)	// boot_PPC(path) (syscall 0x41)
+				PATCH(i, 0xE59F0044)	// r0 = ARG1 (0x1330100 ... PC+68)
+				PATCH(i, 0xE5902000)	// r2 = read32(0x1330100)
+				PATCH(i, 0xE59F003C)	// r0 = ARG1 (PC+60)	<===--- LOOPSTART
 				PATCH(i, 0xE3A01020)	// MOV r1 0x20 (ARG2)
 				PATCH(i, 0xE60007F0)	// sync_before_read(0x1330100,32) (syscall 0x3F)
 				PATCH(i, 0xE59F0030)	// r0 = ARG1 (PC+48)
-				PATCH(i, 0xE5902000)	// r2 = read32(0x1330100)
+				PATCH(i, 0xE5903000)	// r3 = read32(0x1330100)
 				PATCH(i, 0xE1520003)	// compare r2 r3
-				PATCH(i, 0x0AFFFFF8)	// BEQ LOOPSTART1                <===---
+				PATCH(i, 0x0AFFFFF8)	// BEQ LOOPSTART		<===---
 				PATCH(i, 0xE59F0020)	// r0 = ARG1 (PC+32)
 				PATCH(i, 0xE59F1020)	// r1 = PPC1 (PC+32)
 				PATCH(i, 0xE5801000)	// write32(r0, r1)
@@ -184,11 +162,9 @@ int main(int argc, char **argv) {
 				PATCH(i, 0x01330100)	//				<===--- ARG1
 				PATCH(i, 0x38802000)	// li r4, 0x2000<===--- PPC1
 				PATCH(i, 0x7c800124)	// mtmsr r4		<===--- PPC2
-				PATCH(i, 0x48000106)	// b 0x104		<===--- PPC3
-				PATCH(i, 0x0d800010)	// HW_TIMER
-				PATCH(i, 0x0d800194)	// HW_RESETS
-
-				DCFlushRange( (void*)i, 224 );
+				PATCH(i, 0x48000106)	// b 0x1800		<===--- PPC3
+				PATCH(i, 0x01200000)	// path
+				DCFlushRange( (void*)reentry, 128 );
 				
 				s32 fd = IOS_Open( "/dev/es", 0 );
 				
