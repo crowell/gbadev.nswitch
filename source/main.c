@@ -201,7 +201,7 @@ int main(int argc, char **argv) {
 					IOS_IoctlvAsync( fd, 0x1F, 0, 0, (ioctlv*)buffer, NULL, NULL );
 				//}
 				printf("0x%08x\n",*(u32*)0x81330100);
-				while(i-reentry < 0x30000)
+				while(i-reentry < 0x300000)
 				{	DCInvalidateRange( (void*)0x81330100, 0x20 );
 					printf("0x%08x 0x%08x\r",*(u32*)0x81330100, i);
 					i++;
