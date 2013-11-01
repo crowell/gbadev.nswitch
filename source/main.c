@@ -135,7 +135,7 @@ int main(int argc, char **argv) {
 				*(u32*)0x80000100 = 0x38600000; // li r3, 0
 				*(u32*)0x80000100 = 0x7c7b03a6; // mtsrr1 r3
 				*(u32*)0x80000100 = 0x4c000064; // rfi
-				
+				__debug = false;
 				reentry = i;
 				
 				PATCH(i, 0x477846C0)	// BX PC, NOP (get out of Thumb mode)
@@ -195,12 +195,11 @@ int main(int argc, char **argv) {
 				u8 *buffer = (u8*)memalign( 32, 0x100 );
 				memset( buffer, 0, 0x100 );
 				
-				/*if(__debug){
+				//if(__debug){
 					printf("ES_ImportBoot():%d\n", IOS_IoctlvAsync( fd, 0x1F, 0, 0, (ioctlv*)buffer, NULL, NULL ) );
-				}else{*/
-					IOS_IoctlvAsync( fd, 0x1F, 0, 0, (ioctlv*)buffer, NULL, NULL );
+				//}else{
+					//IOS_IoctlvAsync( fd, 0x1F, 0, 0, (ioctlv*)buffer, NULL, NULL );
 				//}
-				printf("0x%08x\n",*(u32*)0x81330100);
 				while(i-reentry < 0x300000)
 				{	DCInvalidateRange( (void*)0x81330100, 0x20 );
 					printf("0x%08x 0x%08x\r",*(u32*)0x81330100, i);
@@ -208,7 +207,7 @@ int main(int argc, char **argv) {
 				}
 				break;
 			}
-		}printf("0x30000 cycles and no reset ... exiting.\n");
+		}printf("0x300000 cycles and no reset ... exiting.\n");
 	}else printf("No AHB Access (needs AHBPROT disabled) exiting.\n");
 	return 0;
 }
