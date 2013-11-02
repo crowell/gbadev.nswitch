@@ -170,6 +170,8 @@ int main(int argc, char **argv) {
 					*(u32*)0x81330120 = i;
 					DCFlushRange((void*)0x81330120, 32);
 				}
+				*(u32*)0x81330120 = 0;
+				DCFlushRange((void*)0x81330120, 32);
 				break;
 			}
 		}printf("0x300000 cycles and no reset ... exiting.\n");
