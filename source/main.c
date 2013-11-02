@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
 	initialize(rmode);
 	printf("\n\n\n");
 	u32 i, reentry = (u32)stub_1800_1_512;
-	strcpy(path, "/title/00000001/00000200/00000003.app");
+	strcpy(path, "/title/00000001/00000002/00000017.app");
 //	CheckArguments(argc, argv);
 	
 	if(AHBPROT_DISABLED){
@@ -135,43 +135,52 @@ int main(int argc, char **argv) {
 				*(u32*)0x80000100 = 0x4c000064; // rfi
 				__debug = false;
 				reentry = i;
-				*(u32*)0x81330120 = i;
-				DCFlushRange((void*)0x81330120, 32);
 				
-				DCInvalidateRange( (void*)i, 64 );
-				PATCH(i, 0x477846C0)
-				PATCH(i, 0xE59F302C)
-				PATCH(i, 0xE2832020)
-				PATCH(i, 0xE3A01020)
-				PATCH(i, 0xE1A00002)
-				PATCH(i, 0xE60007F0)
-				PATCH(i, 0xE5921000)
-				PATCH(i, 0xE3510000)
-				PATCH(i, 0x012FFF1E)
-				PATCH(i, 0xE5831000)
-				PATCH(i, 0xE3A01020)
-				PATCH(i, 0xE1A00003)
-				PATCH(i, 0xE6000810)
-				PATCH(i, 0xEAFFFFF4)
-				PATCH(i, 0x01330100)
-				DCFlushRange( (void*)reentry, 64 );
+				DCInvalidateRange( (void*)i, 128 );
+				PATCH(i, 0x477846C0)	// BX PC, NOP (get out of Thumb mode)
+				PATCH(i, 0xE59F005C)	// r0 = &path (PC+92)
+				PATCH(i, 0xE6000830)	// boot_PPC(path) (syscall 0x41)
+				PATCH(i, 0xE59F0044)	// r0 = ARG1 (0x1330100 ... PC+68)
+				PATCH(i, 0xE5902000)	// r2 = read32(0x1330100)
+				PATCH(i, 0xE59F003C)	// r0 = ARG1 (PC+60)	<===--- LOOPSTART
+				PATCH(i, 0xE3A01020)	// MOV r1 0x20 (ARG2)
+				PATCH(i, 0xE60007F0)	// sync_before_read(0x1330100,32) (syscall 0x3F)
+				PATCH(i, 0xE59F0030)	// r0 = ARG1 (PC+48)
+				PATCH(i, 0xE5903000)	// r3 = read32(0x1330100)
+				PATCH(i, 0xE1520003)	// compare r2 r3
+				PATCH(i, 0x0AFFFFF8)	// BEQ LOOPSTART		<===---
+				PATCH(i, 0xE59F0020)	// r0 = ARG1 (PC+32)
+				PATCH(i, 0xE59F1020)	// r1 = PPC1 (PC+32)
+				PATCH(i, 0xE5801000)	// write32(r0, r1)
+				PATCH(i, 0xE59F101C)	// r1 = PPC2 (PC+28)
+				PATCH(i, 0xE5801004)	// write32(r0+4, r1)
+				PATCH(i, 0xE59F1018)	// r1 = PPC3 (PC+24)
+				PATCH(i, 0xE5801008)	// write32(r0+8, r1)
+				PATCH(i, 0xE3A01020)	// MOV r1 0x20 (ARG2)
+				PATCH(i, 0xE6000810)	// sync_after_write(0x1330100,32)
+				PATCH(i, 0xE12FFF1E)	// BLR
+				PATCH(i, 0x01330100)	//				<===--- ARG1
+				PATCH(i, 0x38802000)	// li r4, 0x2000<===--- PPC1
+				PATCH(i, 0x7c800124)	// mtmsr r4		<===--- PPC2
+				PATCH(i, 0x48000106)	// b 0x1800		<===--- PPC3
+				PATCH(i, 0x01200000)	// path
+				DCFlushRange( (void*)reentry, 128 );
 				
 				s32 fd = IOS_Open( "/dev/es", 0 );
 				
 				u8 *buffer = (u8*)memalign( 32, 0x100 );
 				memset( buffer, 0, 0x100 );
 				
-				IOS_IoctlvAsync( fd, 0x1F, 0, 0, (ioctlv*)buffer, NULL, NULL );
-				
+				//if(__debug){
+					printf("ES_ImportBoot():%d\n", IOS_IoctlvAsync( fd, 0x1F, 0, 0, (ioctlv*)buffer, NULL, NULL ) );
+				//}else{
+					//IOS_IoctlvAsync( fd, 0x1F, 0, 0, (ioctlv*)buffer, NULL, NULL );
+				//}
 				while(i-reentry < 0x300000)
 				{	DCInvalidateRange( (void*)0x81330100, 0x20 );
 					printf("0x%08x 0x%08x\r",*(u32*)0x81330100, i);
 					i++;
-					*(u32*)0x81330120 = i;
-					DCFlushRange((void*)0x81330120, 32);
 				}
-				*(u32*)0x81330120 = 0;
-				DCFlushRange((void*)0x81330120, 32);
 				break;
 			}
 		}printf("0x300000 cycles and no reset ... exiting.\n");
