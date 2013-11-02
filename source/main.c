@@ -140,7 +140,7 @@ int main(int argc, char **argv) {
 				
 				DCInvalidateRange( (void*)i, 64 );
 				PATCH(i, 0x477846C0)
-				PATCH(i, 0xE59F303C)
+				PATCH(i, 0xE59F302C)
 				PATCH(i, 0xE2832020)
 				PATCH(i, 0xE3A01020)
 				PATCH(i, 0xE1A00002)
