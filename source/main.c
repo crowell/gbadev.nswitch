@@ -99,6 +99,14 @@ static void initialize(GXRModeObj *rmode)
 	VIDEO_WaitVSync();
 }
 
+#define REQUEST(X) \
+			memset( buffer, 0, 0x100 ); \
+			*(u32*)0x81330100 = (X); \
+			*(u32*)0x81330104 = 0; \
+			DCFlushRange((void*)0x81330100, 32); \
+			IOS_IoctlvAsync( fd, 0x1F, 0, 0, (ioctlv*)buffer, NULL, NULL ); \
+			while(*(u32*)0x81330104 == 0) DCInvalidateRange( (void*)0x81330100, 0x20 );
+
 int main(int argc, char **argv) {
 	GXRModeObj *rmode;
 	VIDEO_Init();
@@ -142,37 +150,35 @@ int main(int argc, char **argv) {
 				PATCH(i, 0x477846C0)
 				PATCH(i, 0xE3A01020)
 				PATCH(i, 0xE59F0020)
-				PATCH(i, 0xE2800020)
 				PATCH(i, 0xE60007F0)
+				PATCH(i, 0xE3A01020)
+				PATCH(i, 0xE59F0014)
 				PATCH(i, 0xE5902000)
-				PATCH(i, 0xE3520000)
-				PATCH(i, 0x012FFF1E)
-				PATCH(i, 0xE2400020)
+				PATCH(i, 0xE5922000)
 				PATCH(i, 0xE5802000)
+				PATCH(i, 0xE5801004)
 				PATCH(i, 0xE6000810)
-				PATCH(i, 0xEAFFFFF6)
+				PATCH(i, 0xE12FFF1E)
 				PATCH(i, 0x01330100)
 				DCFlushRange( (void*)reentry, 64 );
-				
-				s32 fd = IOS_Open( "/dev/es", 0 );
-				
-				u8 *buffer = (u8*)memalign( 32, 0x100 );
-				memset( buffer, 0, 0x100 );
-				
-				IOS_IoctlvAsync( fd, 0x1F, 0, 0, (ioctlv*)buffer, NULL, NULL );
-				
-				while(i-reentry < 0x300000)
-				{	DCInvalidateRange( (void*)0x81330100, 0x20 );
-					printf("0x%08x 0x%08x\r",*(u32*)0x81330100, i);
-					i++;
-					*(u32*)0x81330120 = i;
-					DCFlushRange((void*)0x81330120, 32);
-				}
-				*(u32*)0x81330120 = 0;
-				DCFlushRange((void*)0x81330120, 32);
 				break;
 			}
-		}printf("0x300000 cycles and no reset ... exiting.\n");
+				
+			s32 fd = IOS_Open( "/dev/es", 0 );
+			
+			u8 *buffer = (u8*)memalign( 32, 0x100 );
+			
+			REQUEST(0xd800010)
+			printf("HW_TIMER : 0x%08x\n",*(u32*)0x81330100);
+			REQUEST(0xd800194)
+			printf("HW_RESETS : 0x%08x\n",*(u32*)0x81330100);
+			REQUEST(0xFFFF9438)
+			printf("KERNEL1 : 0x%08x\n",*(u32*)0x81330100);
+			REQUEST(0xFFFF9250)
+			printf("Kernel2 : 0x%08x\n",*(u32*)0x81330100);
+			
+			while(i-reentry < 0x300000)	i++;
+		}printf("exiting...\n");
 	}else printf("No AHB Access (needs AHBPROT disabled) exiting.\n");
 	return 0;
 }
