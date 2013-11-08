@@ -168,6 +168,7 @@ int main(int argc, char **argv) {
 			
 			u8 *buffer = (u8*)memalign( 32, 0x100 );
 			
+			printf("HW_TIMER : <waiting>\r");
 			REQUEST(0xd800010)
 			printf("HW_TIMER : 0x%08x\n",*(u32*)0x81330100);
 			REQUEST(0xd800194)
@@ -176,6 +177,8 @@ int main(int argc, char **argv) {
 			printf("KERNEL1 : 0x%08x\n",*(u32*)0x81330100);
 			REQUEST(0xFFFF9250)
 			printf("Kernel2 : 0x%08x\n",*(u32*)0x81330100);
+			REQUEST(i-4)
+			printf("patch end : 0x%08x\n",*(u32*)0x81330100);
 			
 			while(i-reentry < 0x300000)	i++;
 		}printf("exiting...\n");
