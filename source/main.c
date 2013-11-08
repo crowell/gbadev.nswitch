@@ -140,19 +140,17 @@ int main(int argc, char **argv) {
 				
 				DCInvalidateRange( (void*)i, 64 );
 				PATCH(i, 0x477846C0)
-				PATCH(i, 0xE59F302C)
-				PATCH(i, 0xE2832020)
 				PATCH(i, 0xE3A01020)
-				PATCH(i, 0xE1A00002)
+				PATCH(i, 0xE59F0020)
+				PATCH(i, 0xE2800020)
 				PATCH(i, 0xE60007F0)
-				PATCH(i, 0xE5921000)
-				PATCH(i, 0xE3510000)
+				PATCH(i, 0xE5902000)
+				PATCH(i, 0xE3520000)
 				PATCH(i, 0x012FFF1E)
-				PATCH(i, 0xE5831000)
-				PATCH(i, 0xE3A01020)
-				PATCH(i, 0xE1A00003)
+				PATCH(i, 0xE2400020)
+				PATCH(i, 0xE5802000)
 				PATCH(i, 0xE6000810)
-				PATCH(i, 0xEAFFFFF4)
+				PATCH(i, 0xEAFFFFF6)
 				PATCH(i, 0x01330100)
 				DCFlushRange( (void*)reentry, 64 );
 				
