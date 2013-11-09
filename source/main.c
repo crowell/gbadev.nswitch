@@ -105,7 +105,7 @@ static void initialize(GXRModeObj *rmode)
 			*(u32*)0x81330100 = 1; \
 			DCFlushRange((void*)0x81330100, 64); \
 			IOS_IoctlvAsync( fd, 0x1F, 0, 0, (ioctlv*)buffer, NULL, NULL ); \
-			DO DCInvalidateRange( (void*)0x81330100, 0x20 ); \
+			do DCInvalidateRange( (void*)0x81330100, 0x20 ); \
 			while(*(u32*)0x81330100 == 1);
 
 int main(int argc, char **argv) {
