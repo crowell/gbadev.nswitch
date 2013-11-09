@@ -101,11 +101,12 @@ static void initialize(GXRModeObj *rmode)
 
 #define REQUEST(X) \
 			memset( buffer, 0, 0x100 ); \
-			*(u32*)0x81330100 = (X); \
-			*(u32*)0x81330104 = 0; \
-			DCFlushRange((void*)0x81330100, 32); \
+			*(u32*)0x81330120 = (X); \
+			*(u32*)0x81330100 = 1; \
+			DCFlushRange((void*)0x81330100, 64); \
 			IOS_IoctlvAsync( fd, 0x1F, 0, 0, (ioctlv*)buffer, NULL, NULL ); \
-			while(*(u32*)0x81330104 == 0) DCInvalidateRange( (void*)0x81330100, 0x20 );
+			DO DCInvalidateRange( (void*)0x81330100, 0x20 ); \
+			while(*(u32*)0x81330100 == 1);
 
 int main(int argc, char **argv) {
 	GXRModeObj *rmode;
@@ -148,15 +149,16 @@ int main(int argc, char **argv) {
 				
 				DCInvalidateRange( (void*)i, 64 );
 				PATCH(i, 0x477846C0)
+				PATCH(i, 0xE59F3028)
+				PATCH(i, 0xE2832020)
 				PATCH(i, 0xE3A01020)
-				PATCH(i, 0xE59F0020)
+				PATCH(i, 0xE1A00002)
 				PATCH(i, 0xE60007F0)
+				PATCH(i, 0xE5921000)
+				PATCH(i, 0xE5910000)
+				PATCH(i, 0xE5830000)
 				PATCH(i, 0xE3A01020)
-				PATCH(i, 0xE59F0014)
-				PATCH(i, 0xE5902000)
-				PATCH(i, 0xE5922000)
-				PATCH(i, 0xE5802000)
-				PATCH(i, 0xE5801004)
+				PATCH(i, 0xE1A00003)
 				PATCH(i, 0xE6000810)
 				PATCH(i, 0xE12FFF1E)
 				PATCH(i, 0x01330100)
