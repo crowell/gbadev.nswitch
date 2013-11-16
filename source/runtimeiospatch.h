@@ -108,7 +108,9 @@ s32 IosPatch_AHBPROT(bool verbose);
  */
 s32 IosPatch_RUNTIME(bool wii, bool sciifii, bool vwii, bool verbose);
 
-void disable_memory_protection();
+static inline void disable_memory_protection() {
+	write32(MEM_PROT, read32(MEM_PROT) & 0x0000FFFF);
+}
 
 /**
  * This function combines IosPatch_AHBPROT + IOS_ReloadIOS + IosPatch_RUNTIME
