@@ -28,6 +28,7 @@
 #include <ogc/machine/processor.h>
 
 #include "mmustub.h"
+#include "elf.h"
 
 bool __debug = true;
 static char* path = (char*)0x81200000;
@@ -76,8 +77,14 @@ void CheckArguments(int argc, char **argv) {
 	else printf("Will dump NAND to sd:/bootmii/nand.bin .\n");
 }
 */
-static void disable_memory_protection() {
-	write32(MEM_PROT, read32(MEM_PROT) & 0x0000FFFF);
+void IosPrepatchSyscall54(void*BINAddr, u32 syscEntry)
+{	ioshdr *IOSHead = (ioshdr*)BINAddr;
+	Elf32_Ehdr *ELFHead = (Elf32_Ehdr*)(BINAddr + ELFHead->hdrsize + ELFHead->loadersize);
+	Elf32_Phdr *progHeads = (Elf32_Phdr*)( ((void*)ELFHead) + ELFHead->e_phoff );
+	void*flushMe = ((void*)ELFHead) + progHeads[ELFHead->ephnum-2]->p_offset + (0x54*4);
+	*(u32*)(flushMe) = syscEntry;
+	DCFlushRange(flushMe, 32);
+	DEBUG("Syscall entry point reference patched at address 0x%08x", flushMe);
 }
 
 static void initialize(GXRModeObj *rmode)
@@ -132,7 +139,7 @@ int main(int argc, char **argv) {
 		};
 		DEBUG("Searching for ES_ImportBoot2.\n");
 		disable_memory_protection();
-		for( i = 0x939F0000; i < 0x939FE000; i+=2 )
+		for( i = 0x939F0000; i < 0x939FE000; i+=4 )
 		{	
 			if( memcmp( (void*)(i), ES_ImportBoot2, sizeof(ES_ImportBoot2) ) == 0 )
 			{	DEBUG("Found. Patching.\n");
