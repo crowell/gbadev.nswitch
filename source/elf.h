@@ -11,8 +11,6 @@ Copyright (C) 2008, 2009	Hector Martin "marcan" <marcan@marcansoft.com>
 #ifndef __ELF_H__
 #define __ELF_H__
 
-#include "types.h"
-
 #define EI_NIDENT 16
 
 typedef struct {
