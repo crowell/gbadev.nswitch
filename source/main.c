@@ -79,12 +79,12 @@ void CheckArguments(int argc, char **argv) {
 */
 void IosPrepatchSyscall54(void*BINAddr, u32 syscEntry)
 {	ioshdr *IOSHead = (ioshdr*)BINAddr;
-	Elf32_Ehdr *ELFHead = (Elf32_Ehdr*)(BINAddr + ELFHead->hdrsize + ELFHead->loadersize);
+	Elf32_Ehdr *ELFHead = (Elf32_Ehdr*)(BINAddr + IOSHead->hdrsize + IOSHead->loadersize);
 	Elf32_Phdr *progHeads = (Elf32_Phdr*)( ((void*)ELFHead) + ELFHead->e_phoff );
-	void*flushMe = ((void*)ELFHead) + progHeads[ELFHead->ephnum-2]->p_offset + (0x54*4);
+	void*flushMe = ((void*)ELFHead) + progHeads[ELFHead->e_phnum-2]->p_offset + (0x54*4);
 	*(u32*)(flushMe) = syscEntry;
 	DCFlushRange(flushMe, 32);
-	DEBUG("Syscall entry point reference patched at address 0x%08x", flushMe);
+	DEBUG("Syscall entry point reference patched at address 0x%08x", (u32)flushMe);
 }
 
 static void initialize(GXRModeObj *rmode)
