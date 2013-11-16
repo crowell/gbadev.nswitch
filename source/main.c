@@ -178,21 +178,13 @@ int main(int argc, char **argv) {
 		s32 fd = IOS_Open( "/dev/es", 0 );
 		
 		u8 *buffer = (u8*)memalign( 32, 0x100 );
-		
-		printf("HW_TIMER : <waiting>\r");
-		REQUEST(0xd800010)
-		printf("HW_TIMER : 0x%08x\n",*(u32*)0x81330100);
-		REQUEST(0xd800194)
-		printf("HW_RESETS : 0x%08x\n",*(u32*)0x81330100);
-		REQUEST(0xFFFF9438)
-		printf("KERNEL1 : 0x%08x\n",*(u32*)0x81330100);
-		REQUEST(0xFFFF9250)
-		printf("Kernel2 : 0x%08x\n",*(u32*)0x81330100);
-		REQUEST(i-4)
-		printf("patch end : 0x%08x\n",*(u32*)0x81330100);
-		
-		udelay(10000000);
-		printf("exiting...\n");
+		i=0;
+		do
+		{	REQUEST(0xd800010)
+			printf("HW_TIMER : 0x%08x\r",*(u32*)0x81330100);
+			i++;
+		}while (1<1000000);
+		printf("All done. Exiting...\n");
 	}else printf("No AHB Access (needs AHBPROT disabled) exiting.\n");
 	return 0;
 }
