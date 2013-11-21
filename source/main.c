@@ -214,22 +214,22 @@ int main(int argc, char **argv) {
 		printf("Loading IOS 80 (%08x).\n", read32(0x80003140));
 		__ES_Init();
 		u32 numviews;
-		ES_GetNumTicketViews(0x00000001000000FEULL, &numviews);
-		ES_GetTicketViews(0x00000001000000FEULL, views, numviews);
-		ES_LaunchTitleBackground(0x00000001000000FEULL, &views[0]);
+		ES_GetNumTicketViews(0x0000000100000050FEULL, &numviews);
+		ES_GetTicketViews(0x0000000100000050FEULL, views, numviews);
+		ES_LaunchTitleBackground(0x0000000100000050FEULL, &views[0]);
 
 		__ES_Reset();
 		i=0;
-		while ((read32(0x80003140) >> 16) == 0)
+		do
 		{	printf("%08x %d\r", read32(0x80003140), i++);
 			udelay(1000);
-		}
+		}while ((read32(0x80003140) >> 16) == 0);
 		printf("\n");
 		for (i = 0; !(read32(0x0d000004) & 2); i++) {
 				udelay(1000);
 				printf("%08x %d\r", read32(0x0d000004), i++);
-				if (i >= MAX_IPC_RETRIES)
-					break;
+				//if (i >= MAX_IPC_RETRIES)
+					//break;
 		}
 		__IOS_InitializeSubsystems();
 		printf("IOS80 manual reload complete. Testing by reloading back to 58\n");
