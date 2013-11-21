@@ -202,22 +202,25 @@ int main(int argc, char **argv) {
 				break;
 			}
 		}
-		printf("Manually loading pre-loaded IOS80\n");
 		__IOS_ShutdownSubsystems();
 		s32 fd = IOS_Open( "/dev/es", 0 );
 		
 		u8 *buffer = (u8*)memalign( 32, 0x100 );
 		memset( buffer, 0, 0x100 );
+		printf("Manually loading pre-loaded IOS80\n");
 		IOS_IoctlvAsync( fd, 0x1F, 0, 0, (ioctlv*)buffer, NULL, NULL );
 		__ES_Reset();
-        while ((read32(0x80003140) >> 16) == 0)
-                udelay(1000);
-		
-        for (i = 0; !(read32(0x0d000004) & 2); i++) {
-                udelay(1000);
-                
-                if (i >= MAX_IPC_RETRIES)
-                        break;
+		i=0;
+		while ((read32(0x80003140) >> 16) == 0)
+		{	printf("%08x %d\r", read32(0x80003140), i++);
+			udelay(1000);
+		}
+		printf("\n");
+		for (i = 0; !(read32(0x0d000004) & 2); i++) {
+				udelay(1000);
+				printf("%08x %d\r", read32(0x0d000004), i++);
+				if (i >= MAX_IPC_RETRIES)
+					break;
 		}
 		__IOS_InitializeSubsystems();
 		printf("IOS80 manual reload complete. Testing by reloading back to 58\n");
