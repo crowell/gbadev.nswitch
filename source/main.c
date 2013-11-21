@@ -39,6 +39,11 @@
 #include "elf.h"
 #include "runtimeiospatch.c"
 
+#define MAX_IPC_RETRIES 400
+
+extern void udelay(int us);
+
+
 bool __debug = true;
 #define MEM_REG_BASE 0xd8b4000
 #define MEM_PROT (MEM_REG_BASE + 0x20a)
