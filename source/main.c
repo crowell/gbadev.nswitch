@@ -207,8 +207,17 @@ int main(int argc, char **argv) {
 		
 		u8 *buffer = (u8*)memalign( 32, 0x100 );
 		memset( buffer, 0, 0x100 );
-		printf("Manually loading pre-loaded IOS80\n");
-		IOS_IoctlvAsync( fd, 0x1F, 0, 0, (ioctlv*)buffer, NULL, NULL );
+		
+		//printf("Manually loading pre-loaded IOS80\n");
+		//IOS_IoctlvAsync( fd, 0x1F, 0, 0, (ioctlv*)buffer, NULL, NULL );
+		tikview views[4] ATTRIBUTE_ALIGN(32);
+		printf("Loading IOS 80 (%08x).\n", read32(0x80003140));
+		__ES_Init();
+		u32 numviews;
+		ES_GetNumTicketViews(0x00000001000000FEULL, &numviews);
+		ES_GetTicketViews(0x00000001000000FEULL, views, numviews);
+		ES_LaunchTitleBackground(0x00000001000000FEULL, &views[0]);
+
 		__ES_Reset();
 		i=0;
 		while ((read32(0x80003140) >> 16) == 0)
@@ -225,7 +234,8 @@ int main(int argc, char **argv) {
 		__IOS_InitializeSubsystems();
 		printf("IOS80 manual reload complete. Testing by reloading back to 58\n");
 		IOS_ReloadIOS(58);
-		printf("All done. Exiting...\n");
+		printf("All done. Exiting in 1 sec...\n");
+		udelay(1000000);
 	}else printf("No AHB Access (needs AHBPROT disabled) exiting.\n");
 	return 0;
 }
