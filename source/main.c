@@ -159,7 +159,7 @@ int main(int argc, char **argv) {
 	if(AHBPROT_DISABLED){
 	
 		printf("Applying patches to IOS with AHBPROT\n");
-		printf("IosPatch_RUNTIME(...) returned %i\n", IosPatch_RUNTIME(true, true, false, true));
+		printf("IosPatch_RUNTIME(...) returned %i\n", IosPatch_RUNTIME(true, false, false, true));
 		printf("ISFS_Initialize() returned %d\n", ISFS_Initialize());
 		printf("loadBINfromNAND() returned %d .\n", loadBINfromNAND("/title/00000001/00000050/content/0000000d.app", 168512));
 		//IosPrepatchSyscall54((void*)0x90100000, new_syscall_code);
