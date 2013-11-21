@@ -37,7 +37,7 @@
 
 #include "mmustub.h"
 #include "elf.h"
-#include "runtimeiospatch.c"
+#include "runtimeiospatch.h"
 
 #define MAX_IPC_RETRIES 400
 
