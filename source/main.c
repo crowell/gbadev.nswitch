@@ -37,6 +37,7 @@
 
 #include "mmustub.h"
 #include "elf.h"
+#include "runtimeiospatch.c"
 
 bool __debug = true;
 #define MEM_REG_BASE 0xd8b4000
@@ -207,10 +208,10 @@ int main(int argc, char **argv) {
         while ((read32(0x80003140) >> 16) == 0)
                 udelay(1000);
 		
-        for (counter = 0; !(read32(0x0d000004) & 2); counter++) {
+        for (i = 0; !(read32(0x0d000004) & 2); i++) {
                 udelay(1000);
                 
-                if (counter >= MAX_IPC_RETRIES)
+                if (i >= MAX_IPC_RETRIES)
                         break;
 		}
 		__IOS_InitializeSubsystems();
