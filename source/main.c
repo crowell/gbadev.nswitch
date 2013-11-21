@@ -27,6 +27,14 @@
 #include <malloc.h>
 #include <ogc/machine/processor.h>
 
+#include <ogc/machine/asm.h>
+//#include <ogc/cache.h>
+#include <ogc/ipc.h>
+//#include <ogc/stm.h>
+//#include <ogc/es.h>
+//#include <ogc/ios.h>
+//#include <ogc/irq.h>
+
 #include "mmustub.h"
 #include "elf.h"
 
@@ -204,7 +212,7 @@ int main(int argc, char **argv) {
                 
                 if (counter >= MAX_IPC_RETRIES)
                         break;
-		
+		}
 		__IOS_InitializeSubsystems();
 		printf("IOS80 manual reload complete. Testing by reloading back to 58\n");
 		IOS_ReloadIOS(58);
