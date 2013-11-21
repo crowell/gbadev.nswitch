@@ -31,7 +31,6 @@
 #include "elf.h"
 
 bool __debug = true;
-static char* path = (char*)0x81200000;
 #define MEM_REG_BASE 0xd8b4000
 #define MEM_PROT (MEM_REG_BASE + 0x20a)
 #define AHBPROT_DISABLED (*(vu32*)0xcd800064 == 0xFFFFFFFF)
@@ -77,6 +76,23 @@ void CheckArguments(int argc, char **argv) {
 	else printf("Will dump NAND to sd:/bootmii/nand.bin .\n");
 }
 */
+int loadBINfromNAND(const char *path, u32 size)
+{
+	int fd ATTRIBUTE_ALIGN(32);
+	s32 fres;
+	
+	DEBUG("Loading BIN file: %s .\n", path);
+	fd = ISFS_Open(path, ISFS_OPEN_READ);
+	if (fd < 0)
+		return fd;
+	fres = ISFS_Read(fd, (void*)0x90100000, size);
+	DCFlushRange((void*)0x90100000, size);
+	if (fres < 0)
+		return fres;
+	ISFS_Close(fd);
+	return 0;
+}
+
 void IosPrepatchSyscall54(void*BINAddr, u32 syscEntry)
 {	ioshdr *IOSHead = (ioshdr*)BINAddr;
 	Elf32_Ehdr *ELFHead = (Elf32_Ehdr*)(BINAddr + IOSHead->hdrsize + IOSHead->loadersize);
@@ -124,11 +140,15 @@ int main(int argc, char **argv) {
 	initialize(rmode);
 	printf("\n\n\n");
 	u32 i, reentry = (u32)stub_1800_1_512;
-	strcpy(path, "/title/00000001/00000200/00000003.app");
 //	CheckArguments(argc, argv);
 	
 	if(AHBPROT_DISABLED){
 	
+		printf("Applying patches to IOS with AHBPROT\n");
+		printf("IosPatch_RUNTIME(...) returned %i\n", IosPatch_RUNTIME(true, true, false, true));
+		printf("ISFS_Initialize() returned %d\n", ISFS_Initialize());
+		printf("loadBINfromNAND() returned %d .\n", loadBINfromNAND("/title/00000001/00000050/content/0000000d.app", 168512));
+		//IosPrepatchSyscall54((void*)0x90100000, new_syscall_code);
 			/** boot mini without BootMii IOS code by Crediar. **/
 	
 		DEBUG("** Running boot mini without BootMii IOS code by Crediar. **\n");
@@ -138,7 +158,6 @@ int main(int argc, char **argv) {
 			0x68, 0x4B, 0x2B, 0x06, 0xD1, 0x0C, 0x68, 0x8B, 0x2B, 0x00, 0xD1, 0x09, 0x68, 0xC8, 0x68, 0x42
 		};
 		DEBUG("Searching for ES_ImportBoot2.\n");
-		disable_memory_protection();
 		for( i = 0x939F0000; i < 0x939FE000; i+=4 )
 		{	
 			if( memcmp( (void*)(i), ES_ImportBoot2, sizeof(ES_ImportBoot2) ) == 0 )
@@ -156,34 +175,39 @@ int main(int argc, char **argv) {
 				*(u32*)0x81330120 = i;
 				DCFlushRange((void*)0x81330120, 32);
 				
-				DCInvalidateRange( (void*)i, 64 );
-				PATCH(i, 0x477846C0)
-				PATCH(i, 0xE59F3028)
-				PATCH(i, 0xE2832020)
-				PATCH(i, 0xE3A01020)
-				PATCH(i, 0xE1A00002)
-				PATCH(i, 0xE60007F0)
-				PATCH(i, 0xE5921000)
-				PATCH(i, 0xE5910000)
-				PATCH(i, 0xE5830000)
-				PATCH(i, 0xE3A01020)
-				PATCH(i, 0xE1A00003)
-				PATCH(i, 0xE6000810)
-				PATCH(i, 0xE12FFF1E)
-				PATCH(i, 0x01330100)
-				DCFlushRange( (void*)reentry, 64 );
+				DCInvalidateRange( (void*)i, 0x20 );
+				
+				*(vu32*)(i+0x00)	= 0x48034904;	// LDR R0, 0x10, LDR R1, 0x14
+				*(vu32*)(i+0x04)	= 0x477846C0;	// BX PC, NOP
+				*(vu32*)(i+0x08)	= 0xE6000870;	// SYSCALL
+				*(vu32*)(i+0x0C)	= 0xE12FFF1E;	// BLR
+				*(vu32*)(i+0x10)	= 0x10100000;	// offset
+				*(vu32*)(i+0x14)	= 0x00001C20;	// version
+
+				DCFlushRange( (void*)i, 0x20 );
 				break;
 			}
 		}
+		printf("Manually loading pre-loaded IOS80\n");
+		__IOS_ShutdownSubsystems();
 		s32 fd = IOS_Open( "/dev/es", 0 );
 		
 		u8 *buffer = (u8*)memalign( 32, 0x100 );
-		i=0;
-		do
-		{	REQUEST(0xd800010)
-			printf("HW_TIMER : 0x%08x\r",*(u32*)0x81330100);
-			i++;
-		}while (1<1000000);
+		memset( buffer, 0, 0x100 );
+		IOS_IoctlvAsync( fd, 0x1F, 0, 0, (ioctlv*)buffer, NULL, NULL );
+		__ES_Reset();
+        while ((read32(0x80003140) >> 16) == 0)
+                udelay(1000);
+		
+        for (counter = 0; !(read32(0x0d000004) & 2); counter++) {
+                udelay(1000);
+                
+                if (counter >= MAX_IPC_RETRIES)
+                        break;
+		
+		__IOS_InitializeSubsystems();
+		printf("IOS80 manual reload complete. Testing by reloading back to 58\n");
+		IOS_ReloadIOS(58);
 		printf("All done. Exiting...\n");
 	}else printf("No AHB Access (needs AHBPROT disabled) exiting.\n");
 	return 0;
