@@ -61,11 +61,11 @@ void CheckArguments(int argc, char **argv) {
 	int i;
 	char*pathToSet = 0;
 	char*newPath = redirectedGecko->buf;
-	if(argv[0][0] == 's' || argv[0][0] == 'S') // Make sure you're using an SD card
+/*	if(argv[0][0] == 's' || argv[0][0] == 'S') // Make sure you're using an SD card
 	{	pathToSet = strndup(argv[0] + 3, strrchr(argv[0], '/') - argv[0] - 3);
 		snprintf(newPath, sizeof(redirectedGecko->buf), "%s/nand.bin", pathToSet);
 	}
-	for (i = 1; i < argc; i++)
+*/	for (i = 1; i < argc; i++)
 	{	if (CHECK_ARG("debug="))
 			__debug = atoi(CHECK_ARG_VAL("debug="));
 		else if (CHECK_ARG("path="))
@@ -77,7 +77,7 @@ void CheckArguments(int argc, char **argv) {
 		free(pathToSet);
 		printf("Will dump NAND to %s .\n", newPath);
 	}
-	else printf("Will dump NAND to sd:/bootmii/nand.bin .\n");
+	else printf("Will dump NAND to sd:/nand.bin\n");
 }
 
 static void disable_memory_protection() {
